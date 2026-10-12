@@ -206,9 +206,9 @@ export const EDITOR = {
 export type CursorMode = 'overlay' | 'system'
 
 /** Sprite the overlay pointer draws. Only meaningful when cursorMode is 'overlay'. */
-export type CursorSkin = 'agent' | 'hand' | 'arrow' | 'arrow-dark' | 'ring' | 'dot' | 'crosshair' | 'sprite'
+export type CursorSkin = 'agent' | 'halo' | 'star' | 'hand' | 'arrow' | 'arrow-dark' | 'ring' | 'dot' | 'crosshair' | 'sprite'
 
-export const CURSOR_SKINS: readonly CursorSkin[] = ['agent', 'hand', 'arrow', 'arrow-dark', 'ring', 'dot', 'crosshair', 'sprite']
+export const CURSOR_SKINS: readonly CursorSkin[] = ['agent', 'halo', 'star', 'hand', 'arrow', 'arrow-dark', 'ring', 'dot', 'crosshair', 'sprite']
 
 /**
  * The hand reads as "I am pointing at this" rather than "I am a mouse", which is

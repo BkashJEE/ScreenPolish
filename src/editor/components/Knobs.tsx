@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, type ReactNode } from 'react'
-import { AGENT_POINTER_COLOR } from '../../render/render-frame'
+import { AGENT_POINTER_COLOR, STAR_POINTER_COLOR } from '../../render/render-frame'
 import type { FolderBackground, MusicTrack } from '../../shared/ipc'
 import { BUNDLED_MUSIC } from '../../shared/bundled-music'
 import { CLICK_SOUND_STYLES, DEFAULT_CLICK_SOUND, type ClickSoundStyle } from '../../shared/click-sound'
@@ -614,6 +614,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             options={[
               { value: 'agent', label: 'Agent' },
               { value: 'halo', label: 'Halo' },
+              { value: 'star', label: 'Star' },
               { value: 'arrow', label: 'Arrow' },
               { value: 'hand', label: 'Hand' },
               { value: 'bobbing', label: 'Bobbing' },
@@ -622,9 +623,12 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             ]}
           />
         </Row>
-        {(project.cursor.style === 'agent' || project.cursor.style === 'halo') && (
+        {(project.cursor.style === 'agent' || project.cursor.style === 'halo' || project.cursor.style === 'star') && (
           <Row label="Colour">
-            <ColorField value={project.cursor.color ?? (project.cursor.style === 'halo' ? '#ffffff' : AGENT_POINTER_COLOR)} onChange={(color) => set('cursor', { color })} />
+            <ColorField
+              value={project.cursor.color ?? (project.cursor.style === 'halo' ? '#ffffff' : project.cursor.style === 'star' ? STAR_POINTER_COLOR : AGENT_POINTER_COLOR)}
+              onChange={(color) => set('cursor', { color })}
+            />
           </Row>
         )}
         <SliderField label="Size" value={project.cursor.size} min={0} max={3} step={0.05} onChange={(size) => set('cursor', { size })} format={(v) => (v === 0 ? 'Hidden' : `${v.toFixed(2)}x`)} />

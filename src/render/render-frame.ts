@@ -517,6 +517,158 @@ export function drawHalo(ctx: Ctx2D, x: number, y: number, ringX: number, ringY:
   ctx.restore()
 }
 
+/** The Star pointer's gold when the project names no colour. */
+export const STAR_POINTER_COLOR = '#f5c542'
+/** How much pointer path the Star's comet tail covers, in seconds, and in how many samples. */
+export const STAR_TRAIL_SEC = 0.32
+export const STAR_TRAIL_SAMPLES = 12
+/** How long a click's sparkle burst lasts. */
+export const STAR_BURST_SEC = 0.55
+
+function starColor(color?: string): string {
+  return color && /^#[0-9a-f]{6}$/i.test(color) ? color : STAR_POINTER_COLOR
+}
+
+/** `hex` moved toward white (amount > 0) or black (amount < 0), as an rgba() string. */
+function shadeHex(hex: string, amount: number, alpha = 1): string {
+  const n = parseInt(hex.slice(1), 16)
+  const toward = amount >= 0 ? 255 : 0
+  const k = Math.abs(amount)
+  const ch = (v: number) => Math.round(v + (toward - v) * k)
+  return `rgba(${ch((n >> 16) & 255)}, ${ch((n >> 8) & 255)}, ${ch(n & 255)}, ${alpha})`
+}
+
+/** A four-pointed sparkle with curved, inward sides: ✦, tips at radius `r`. */
+function traceSparkle(ctx: Ctx2D, x: number, y: number, r: number, rotation = 0): void {
+  const tip = (k: number) => {
+    const a = rotation - Math.PI / 2 + (k * Math.PI) / 2
+    return [x + Math.cos(a) * r, y + Math.sin(a) * r] as const
+  }
+  ctx.beginPath()
+  const [sx, sy] = tip(0)
+  ctx.moveTo(sx, sy)
+  for (let k = 0; k < 4; k++) {
+    const a = rotation - Math.PI / 2 + (k * Math.PI) / 2 + Math.PI / 4
+    const [nx, ny] = tip(k + 1)
+    ctx.quadraticCurveTo(x + Math.cos(a) * r * 0.16, y + Math.sin(a) * r * 0.16, nx, ny)
+  }
+  ctx.closePath()
+}
+
+/**
+ * The Star pointer: a gold sparkle on the hotspot in a soft glow, twinkling
+ * slowly with time `tSec` and swelling by `pop` (0 to 1) on a click. A thin
+ * amber edge keeps it visible on white pages.
+ */
+export function drawStar(ctx: Ctx2D, x: number, y: number, sizePx: number, color?: string, tSec = 0, pop = 0): void {
+  if (!(sizePx > 0)) return
+  const base = starColor(color)
+  const r = sizePx * 0.5 * (1 + 0.06 * Math.sin(tSec * 3.1) + 0.28 * Math.min(1, Math.max(0, pop || 0)))
+  const rotation = 0.12 * Math.sin(tSec * 1.7)
+  ctx.save()
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 1.7)
+  glow.addColorStop(0, shadeHex(base, 0.35, 0.5))
+  glow.addColorStop(1, shadeHex(base, 0, 0))
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(x, y, r * 1.7, 0, Math.PI * 2)
+  ctx.fill()
+  traceSparkle(ctx, x, y, r, rotation)
+  const body = ctx.createRadialGradient(x, y, 0, x, y, r)
+  body.addColorStop(0, shadeHex(base, 0.85))
+  body.addColorStop(0.35, shadeHex(base, 0.25))
+  body.addColorStop(1, shadeHex(base, -0.2))
+  ctx.fillStyle = body
+  ctx.fill()
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = Math.max(1, sizePx * 0.045)
+  ctx.strokeStyle = shadeHex(base, -0.6, 0.6)
+  ctx.stroke()
+  ctx.restore()
+}
+
+/** The Star's tail never runs longer than this many pointer sizes, however fast the move. */
+export const STAR_TRAIL_MAX = 4
+
+/**
+ * The Star's comet tail along `points`, newest first (the first point is the
+ * star itself), cut off at STAR_TRAIL_MAX pointer sizes so a jump across the
+ * screen still reads as a short streak. It tapers and fades with distance from
+ * the star, with sparkles shimmering along it; a pointer at rest has no tail.
+ */
+export function drawStarTrail(ctx: Ctx2D, points: Array<{ x: number; y: number }>, sizePx: number, color?: string, tSec = 0): void {
+  if (!(sizePx > 0) || points.length < 2) return
+  const base = starColor(color)
+  const maxLen = STAR_TRAIL_MAX * sizePx
+  const path: Array<{ x: number; y: number; at: number }> = [{ ...points[0]!, at: 0 }]
+  let total = 0
+  for (let i = 1; i < points.length; i++) {
+    const a = path[path.length - 1]!
+    const b = points[i]!
+    const seg = Math.hypot(b.x - a.x, b.y - a.y)
+    if (seg < 0.5) continue
+    if (total + seg >= maxLen) {
+      const k = (maxLen - total) / seg
+      path.push({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, at: maxLen })
+      total = maxLen
+      break
+    }
+    total += seg
+    path.push({ x: b.x, y: b.y, at: total })
+  }
+  if (total < 1) return
+  ctx.save()
+  ctx.lineCap = 'round'
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]!
+    const b = path[i]!
+    const fade = 1 - (a.at + b.at) / 2 / maxLen
+    ctx.beginPath()
+    ctx.moveTo(a.x, a.y)
+    ctx.lineTo(b.x, b.y)
+    ctx.lineWidth = Math.max(0.5, sizePx * 0.22 * fade)
+    ctx.strokeStyle = shadeHex(base, 0.45, 0.75 * fade)
+    ctx.stroke()
+  }
+  // Sparkles at set distances behind the star, so they ride along the tail
+  // instead of crawling up it as the samples move.
+  const spots = [0.55, 1.05, 1.6, 2.2, 2.85, 3.5]
+  spots.forEach((d, i) => {
+    const at = d * sizePx
+    if (at > total) return
+    const j = path.findIndex((p) => p.at >= at)
+    const a = path[j - 1]!
+    const b = path[j]!
+    const k = (at - a.at) / Math.max(1e-6, b.at - a.at)
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+    const side = sizePx * 0.2 * Math.sin(tSec * 9 + i * 1.7)
+    const sx = a.x + (b.x - a.x) * k + (-(b.y - a.y) / len) * side
+    const sy = a.y + (b.y - a.y) * k + ((b.x - a.x) / len) * side
+    const fade = 1 - at / maxLen
+    traceSparkle(ctx, sx, sy, sizePx * 0.22 * (0.5 + 0.5 * fade), tSec * 2 + i)
+    ctx.fillStyle = shadeHex(base, 0.6, 0.95 * fade)
+    ctx.fill()
+  })
+  ctx.restore()
+}
+
+/** Small sparkles flying out from a click at (`x`, `y`), `ageSec` after it; `seed` turns each burst differently. */
+export function drawStarBurst(ctx: Ctx2D, x: number, y: number, sizePx: number, ageSec: number, seed: number, color?: string): void {
+  if (!(sizePx > 0) || !(ageSec >= 0) || ageSec >= STAR_BURST_SEC) return
+  const base = starColor(color)
+  const p = ageSec / STAR_BURST_SEC
+  const out = 1 - (1 - p) * (1 - p)
+  ctx.save()
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI) / 3 + seed * 0.7
+    const d = sizePx * (0.45 + 1.5 * out) * (i % 2 ? 0.8 : 1)
+    traceSparkle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, sizePx * 0.17 * (1 - p), a)
+    ctx.fillStyle = shadeHex(base, 0.45, 1 - p)
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
 export function drawCursor(ctx: Ctx2D, x: number, y: number, sizePx: number, style: Project['cursor']['style'], color?: string): void {
   if (!(sizePx > 0)) return
   ctx.save()
@@ -537,6 +689,12 @@ export function drawCursor(ctx: Ctx2D, x: number, y: number, sizePx: number, sty
     ctx.stroke()
     ctx.fillStyle = color && /^#[0-9a-f]{6}$/i.test(color) ? color : AGENT_POINTER_COLOR
     ctx.fill()
+    ctx.restore()
+    return
+  }
+
+  if (style === 'star') {
+    drawStar(ctx, 0, 0, sizePx, color)
     ctx.restore()
     return
   }
@@ -955,7 +1113,8 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
       const bobbing = project.cursor.style === 'bobbing'
       const hand = project.cursor.style === 'hand'
       const halo = project.cursor.style === 'halo'
-      const bounce = !bobbing && !hand && !halo && project.cursor.bounce && age < 0.32 ? 1 - 0.22 * Math.sin(Math.PI * age / 0.32) : 1
+      const star = project.cursor.style === 'star'
+      const bounce = !bobbing && !hand && !halo && !star && project.cursor.bounce && age < 0.32 ? 1 - 0.22 * Math.sin(Math.PI * age / 0.32) : 1
       const trails = Math.round(Math.min(1, Math.max(0, project.cursor.motionBlur ?? 0)) * 5)
       for (let i = trails; i > 0; i--) {
         const past = smoothedPointerAt(input.pointerPath, Math.max(trim.start, input.tSec - i * 0.012))
@@ -981,6 +1140,31 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
           if (!drawKnight(card, knight.x, knight.y, knight.size, knight.pose, input.tSec)) drawCursor(card, knight.x, knight.y, knight.size, 'arrow')
           knight = null
         }
+      } else if (star) {
+        // The tail is the pointer's own recent path, drawn relative to the
+        // star so it follows wherever the star is drawn.
+        const size = CURSOR_BASE_PX * project.cursor.size * mapping.scale
+        const localNow = sourceToCroppedPoint(pointer, geometry.crop)
+        const at = (tSec: number) => {
+          const p = smoothedPointerAt(input.pointerPath, Math.max(trim.start, tSec))
+          if (!p) return null
+          const local = sourceToCroppedPoint(p, geometry.crop)
+          return { x: px + mapping.scale * (local.x - localNow.x), y: py + mapping.scale * (local.y - localNow.y) }
+        }
+        const tail: Array<{ x: number; y: number }> = [{ x: px, y: py }]
+        for (let i = 1; i <= STAR_TRAIL_SAMPLES; i++) {
+          const p = at(input.tSec - (i * STAR_TRAIL_SEC) / STAR_TRAIL_SAMPLES)
+          if (p) tail.push(p)
+        }
+        drawStarTrail(card, tail, size, project.cursor.color, input.tSec)
+        input.events.clicks.forEach((c, i) => {
+          if (!c.down) return
+          const clickAge = input.tSec - c.t / 1000
+          if (clickAge < 0 || clickAge >= STAR_BURST_SEC) return
+          const p = at(c.t / 1000)
+          if (p) drawStarBurst(card, p.x, p.y, size, clickAge, i, project.cursor.color)
+        })
+        drawStar(card, px, py, size, project.cursor.color, input.tSec, haloPressAt(age))
       } else if (halo) {
         // The ring follows the dot along the same path a moment later, so it
         // trails a move and settles back over the dot when the pointer rests.

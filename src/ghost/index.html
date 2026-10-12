@@ -117,6 +117,30 @@
       </svg>
 
       <!-- Centred skins: hot spot is the middle, so the viewBox min is negative on both axes. -->
+      <!-- Halo: a thin ring around a small dot, as the editor draws it at rest. -->
+      <svg class="skin" data-skin="halo" style="left: -14px; top: -14px" width="28" height="28" viewBox="-14 -14 28 28" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="0" cy="0" r="9.5" fill="rgba(255,255,255,0.06)" stroke="rgba(14,20,28,0.32)" stroke-width="3.4" />
+        <circle cx="0" cy="0" r="9.5" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="1.6" />
+        <circle cx="0" cy="0" r="2.6" fill="#ffffff" stroke="rgba(14,20,28,0.55)" stroke-width="0.9" />
+      </svg>
+
+      <!-- Star: a gold four-pointed sparkle in a soft glow. -->
+      <svg class="skin" data-skin="star" style="left: -17px; top: -17px" width="34" height="34" viewBox="-17 -17 34 34" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="star-glow">
+            <stop offset="0" stop-color="#f8d67a" stop-opacity="0.5" />
+            <stop offset="1" stop-color="#f5c542" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="star-body">
+            <stop offset="0" stop-color="#fef9ec" />
+            <stop offset="0.35" stop-color="#f7d468" />
+            <stop offset="1" stop-color="#c49e35" />
+          </radialGradient>
+        </defs>
+        <circle cx="0" cy="0" r="16" fill="url(#star-glow)" />
+        <path d="M0 -10 Q1.13 -1.13 10 0 Q1.13 1.13 0 10 Q-1.13 1.13 -10 0 Q-1.13 -1.13 0 -10 Z" fill="url(#star-body)" stroke="rgba(98,79,26,0.6)" stroke-width="0.8" stroke-linejoin="round" />
+      </svg>
+
       <svg class="skin" data-skin="ring" style="left: -15px; top: -15px" width="30" height="30" viewBox="-15 -15 30 30" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="ring-rim" x1="0" y1="0" x2="0.7" y2="1">
