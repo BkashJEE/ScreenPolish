@@ -15,7 +15,7 @@ import { baseName } from '../lib/media'
 import { PACK_PLATE_INK } from '../../brand'
 import { BRAND_CURSORS, BRAND_THEMES } from '../../brand'
 import { BannerMark } from '../../brand/ui'
-import { GRADIENT_PRESETS, SOLID_PRESETS, backgroundCss, matchPreset, matchSolidPreset, patchGroup, BUNDLED_BACKGROUNDS, imageUrlForPath } from '../lib/project'
+import { GRADIENT_PRESETS, SOLID_PRESETS, backgroundCss, matchPreset, matchSolidPreset, patchGroup, BUNDLED_BACKGROUNDS, BACKGROUND_GROUPS, imageUrlForPath } from '../lib/project'
 import { clampFocus, type SegmentPatch } from '../lib/segments'
 import { formatTime } from '../lib/time'
 import { ImageIcon, Trash, Undo, X } from './icons'
@@ -359,36 +359,48 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
       </Section>
 
       <Section title="Background" right={<span className="h-4 w-4 rounded-[4px] border border-line-strong" style={{ background: backgroundCss(bg) }} />}>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Background themes">
-          {BUNDLED_BACKGROUNDS.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              aria-label={`Choose ${b.name} background`}
-              aria-pressed={bg.kind === 'image' && bg.imagePath === b.path}
-              onClick={() => set('background', { kind: 'image', imagePath: b.path, lettering: THEME_LETTERING[b.id] !== undefined })}
-              className={cx(
-                'overflow-hidden rounded-[6px] border text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg',
-                bg.kind === 'image' && bg.imagePath === b.path ? 'border-fg ring-1 ring-fg' : 'border-line-strong'
-              )}
-            >
-              <span className="block aspect-video" style={{ backgroundImage: `url(${imageUrlForPath(b.path)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-              {/* A theme shows its wordmark; everything else says what it is. The
-                  drawn backgrounds are dark and similar at this size, and an
-                  unlabelled tile is not a choice anyone can make. */}
-              {BRAND_THEMES.some((t) => t.id === b.id) ? (
-                <span className="flex h-9 items-center px-2" style={{ background: PACK_PLATE_INK }}>
-                  <BannerMark className="h-4 w-full" />
-                </span>
-              ) : b.id === 'omarchy' ? (
-                <span className="block px-2 py-1 text-xl" aria-hidden="true" style={{ fontFamily: '"Omarchy Brand"' }}>
-                  {'\ue900'}
-                </span>
-              ) : (
-                <span className="block truncate px-2 py-1.5 text-[11px] text-fg-dim">{b.name}</span>
-              )}
-            </button>
-          ))}
+        {/* Sorted into groups: fifteen tiles in one grid was a list to scroll, not a choice. */}
+        <div className="flex flex-col gap-3" role="group" aria-label="Background themes">
+          {BACKGROUND_GROUPS.map((group) => {
+            const items = BUNDLED_BACKGROUNDS.filter((b) => b.group === group.id)
+            if (items.length === 0) return null
+            return (
+              <div key={group.id} className="flex flex-col gap-2">
+                <span className="text-[10.5px] uppercase tracking-wide text-fg-dim">{group.label}</span>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label={`${group.label} backgrounds`}>
+                  {items.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      aria-label={`Choose ${b.name} background`}
+                      aria-pressed={bg.kind === 'image' && bg.imagePath === b.path}
+                      onClick={() => set('background', { kind: 'image', imagePath: b.path, lettering: THEME_LETTERING[b.id] !== undefined })}
+                      className={cx(
+                        'overflow-hidden rounded-[6px] border text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg',
+                        bg.kind === 'image' && bg.imagePath === b.path ? 'border-fg ring-1 ring-fg' : 'border-line-strong'
+                      )}
+                    >
+                      <span className="block aspect-video" style={{ backgroundImage: `url(${imageUrlForPath(b.path)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                      {/* A theme shows its wordmark; everything else says what it is. The
+                          drawn backgrounds are dark and similar at this size, and an
+                          unlabelled tile is not a choice anyone can make. */}
+                      {BRAND_THEMES.some((t) => t.id === b.id) ? (
+                        <span className="flex h-9 items-center px-2" style={{ background: PACK_PLATE_INK }}>
+                          <BannerMark className="h-4 w-full" />
+                        </span>
+                      ) : b.id === 'omarchy' ? (
+                        <span className="block px-2 py-1 text-xl" aria-hidden="true" style={{ fontFamily: '"Omarchy Brand"' }}>
+                          {'\ue900'}
+                        </span>
+                      ) : (
+                        <span className="block truncate px-2 py-1.5 text-[11px] text-fg-dim">{b.name}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
         <FolderBackgrounds selected={bg.kind === 'image' ? bg.imagePath : undefined} onPick={(imagePath) => set('background', { kind: 'image', imagePath, lettering: false })} />
         {themeLettering && (
