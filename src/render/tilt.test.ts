@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { drawTilted, hasTilt, projectCard, quadBounds, type Ctx2D } from './tilt'
+import { MAX_STRIPS, drawTilted, hasTilt, projectCard, quadBounds, type Ctx2D } from './tilt'
 
 const rect = { x: 100, y: 50, width: 800, height: 450 }
 
@@ -58,29 +58,50 @@ describe('projectCard', () => {
 })
 
 describe('drawTilted', () => {
+  /** The body strips: the draws that take the full source height (vertical) or width (horizontal). */
+  const bodies = (calls: Array<{ name: string; args: unknown[] }>, full: number, at: 4 | 3) =>
+    calls.filter((c) => c.name === 'drawImage' && (c.args as number[])[at] === full).map((c) => c.args as number[])
+
   it('draws one strip per slice, vertically for tiltX', () => {
     const { ctx, calls } = fakeCtx()
-    const source = {} as CanvasImageSource
-    drawTilted(ctx, source, { width: 800, height: 450 }, rect, 10, 0, 40)
-    const draws = calls.filter((c) => c.name === 'drawImage')
-    expect(draws).toHaveLength(40)
+    drawTilted(ctx, {} as CanvasImageSource, { width: 800, height: 450 }, rect, 10, 0, 120)
+    const draws = bodies(calls, 450, 4)
+    expect(draws).toHaveLength(120)
     // First strip is taller than the last (left edge near the viewer).
-    const first = draws[0].args as number[]
-    const last = draws[39].args as number[]
-    expect(first[8]).toBeGreaterThan(last[8])
+    expect(draws[0]![8]).toBeGreaterThan(draws[119]![8])
     // Source x advances across the card.
-    expect(first[1]).toBe(0)
-    expect(last[1]).toBeCloseTo((39 / 40) * 800, 6)
+    expect(draws[0]![1]).toBe(0)
+    expect(draws[119]![1]).toBeCloseTo((119 / 120) * 800, 6)
   })
 
   it('draws horizontal strips for a dominant tiltY', () => {
     const { ctx, calls } = fakeCtx()
-    drawTilted(ctx, {} as CanvasImageSource, { width: 800, height: 450 }, rect, 0, 8, 10)
-    const draws = calls.filter((c) => c.name === 'drawImage')
-    expect(draws).toHaveLength(10)
-    const first = draws[0].args as number[]
-    expect(first[2]).toBe(0) // source y starts at 0
-    expect(first[7]).toBeGreaterThan(rect.width) // top strip wider than the card
+    drawTilted(ctx, {} as CanvasImageSource, { width: 800, height: 450 }, rect, 0, 8, 120)
+    const draws = bodies(calls, 800, 3)
+    expect(draws).toHaveLength(120)
+    expect(draws[0]![2]).toBe(0) // source y starts at 0
+    expect(draws[0]![7]).toBeGreaterThan(rect.width) // top strip wider than the card
+  })
+
+  it('cuts the stepping edges with a clip and bleeds each strip past them', () => {
+    const { ctx, calls } = fakeCtx()
+    drawTilted(ctx, {} as CanvasImageSource, { width: 800, height: 450 }, rect, 10, 0, 120)
+    const clip = calls.findIndex((c) => c.name === 'clip')
+    const firstDraw = calls.findIndex((c) => c.name === 'drawImage')
+    expect(clip).toBeGreaterThanOrEqual(0)
+    expect(clip).toBeLessThan(firstDraw)
+    // Each strip also repeats its first and last source rows beyond the edge.
+    const rows = calls.filter((c) => c.name === 'drawImage' && (c.args as number[])[4] === 1).map((c) => (c.args as number[])[2])
+    expect(rows.filter((y) => y === 0)).toHaveLength(120)
+    expect(rows.filter((y) => y === 449)).toHaveLength(120)
+  })
+
+  it('uses more strips for a steep tilt, within a cap', () => {
+    const { ctx, calls } = fakeCtx()
+    drawTilted(ctx, {} as CanvasImageSource, { width: 800, height: 450 }, rect, 30, 0, 4)
+    const n = bodies(calls, 450, 4).length
+    expect(n).toBeGreaterThan(4)
+    expect(n).toBeLessThanOrEqual(MAX_STRIPS)
   })
 
   it('hasTilt ignores noise', () => {
