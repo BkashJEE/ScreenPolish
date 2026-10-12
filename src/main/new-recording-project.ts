@@ -15,7 +15,7 @@ import type { PlanTakeLook } from '@shared/record-plan'
  */
 export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorSkin: string; look?: PlanTakeLook | null }): Project {
   const skin = args.cursorSkin
-  const style = skin === 'agent' ? 'agent' : skin === 'sprite' ? 'sprite' : skin === 'hand' ? 'hand' : skin === 'dot' || skin === 'ring' ? 'dot' : 'arrow'
+  const style = skin === 'agent' || skin === 'halo' || skin === 'star' ? skin : skin === 'sprite' ? 'sprite' : skin === 'hand' ? 'hand' : skin === 'dot' || skin === 'ring' ? 'dot' : 'arrow'
   const look = args.look
   const intro = look?.scenes.find((sc) => sc.kind === 'intro')
   return {

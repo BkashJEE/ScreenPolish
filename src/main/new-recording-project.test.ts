@@ -61,6 +61,8 @@ describe('the Agent pointer', () => {
     const { DEFAULT_CURSOR_SKIN } = await import('@shared/ipc')
     expect(DEFAULT_CURSOR_SKIN).toBe('agent')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'agent' }).cursor.style).toBe('agent')
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'halo' }).cursor.style).toBe('halo')
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'star' }).cursor.style).toBe('star')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'hand' }).cursor.style).toBe('hand')
   })
 })
