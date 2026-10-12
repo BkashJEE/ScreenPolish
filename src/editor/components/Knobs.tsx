@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, type ReactNode } from 'react'
-import { AGENT_POINTER_COLOR, STAR_POINTER_COLOR } from '../../render/render-frame'
+import { AGENT_POINTER_COLOR, STAR_POINTER_COLOR, pointerHasOwnClick } from '../../render/render-frame'
 import type { FolderBackground, MusicTrack } from '../../shared/ipc'
 import { BUNDLED_MUSIC } from '../../shared/bundled-music'
 import { CLICK_SOUND_STYLES, DEFAULT_CLICK_SOUND, type ClickSoundStyle } from '../../shared/click-sound'
@@ -636,10 +636,18 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         <SliderField label="Smoothing" value={project.cursor.smoothing} min={0} max={1} step={0.01} onChange={(smoothing) => set('cursor', { smoothing })} format={pct} />
         <SliderField label="Glide" value={project.cursor.glide ?? 0} min={0} max={1} step={0.01} onChange={(glide) => set('cursor', { glide })} format={pct} />
         <p className="text-[11px] leading-[1.4] text-fg-muted">Glide slows fast pointer moves into calm, even ones that still land on every click. Smoothing only removes jitter.</p>
-        <Row label="Click ripples">
-          <Toggle checked={project.cursor.ripple} onChange={(ripple) => set('cursor', { ripple })} label="Click ripples" />
-        </Row>
-        <Row label="Click bounce"><Toggle checked={project.cursor.bounce ?? false} onChange={(bounce) => set('cursor', { bounce })} label="Click bounce" /></Row>
+        {pointerHasOwnClick(project.cursor.style) ? (
+          <p className="text-[11px] leading-[1.4] text-fg-muted">
+            {project.cursor.style === 'halo' ? 'Halo tightens on each click' : 'Star throws sparkles on each click'}, so click ripples and bounce are off for it.
+          </p>
+        ) : (
+          <>
+            <Row label="Click ripples">
+              <Toggle checked={project.cursor.ripple} onChange={(ripple) => set('cursor', { ripple })} label="Click ripples" />
+            </Row>
+            <Row label="Click bounce"><Toggle checked={project.cursor.bounce ?? false} onChange={(bounce) => set('cursor', { bounce })} label="Click bounce" /></Row>
+          </>
+        )}
         <Row label="Loop cursor"><Toggle checked={project.cursor.loop ?? false} onChange={(loop) => set('cursor', { loop })} label="Loop cursor" /></Row>
         <SliderField label="Cursor sway" value={project.cursor.sway ?? 0} min={0} max={1} step={0.05} onChange={(sway) => set('cursor', { sway })} format={pct} />
         <SliderField label="Motion trail" value={project.cursor.motionBlur ?? 0} min={0} max={1} step={0.05} onChange={(motionBlur) => set('cursor', { motionBlur })} format={pct} />

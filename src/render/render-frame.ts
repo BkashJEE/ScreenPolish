@@ -517,6 +517,14 @@ export function drawHalo(ctx: Ctx2D, x: number, y: number, ringX: number, ringY:
   ctx.restore()
 }
 
+/**
+ * Pointers that answer a click themselves (Halo tightens, Star throws
+ * sparkles). Ripples and bounce would only draw a second effect on top.
+ */
+export function pointerHasOwnClick(style: Project['cursor']['style']): boolean {
+  return style === 'halo' || style === 'star'
+}
+
 /** The Star pointer's gold when the project names no colour. */
 export const STAR_POINTER_COLOR = '#f5c542'
 /** How much pointer path the Star's comet tail covers, in seconds, and in how many samples. */
@@ -1056,7 +1064,7 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
   )
 
   // 6. Ripples go under the cursor so the pointer stays readable.
-  if (project.cursor.ripple) {
+  if (project.cursor.ripple && !pointerHasOwnClick(project.cursor.style)) {
     for (const r of ripplesAt(input.events, input.tSec, RIPPLE_LIFE_SEC)) {
       const local = sourceToCroppedPoint(r, geometry.crop)
       drawRipple(
