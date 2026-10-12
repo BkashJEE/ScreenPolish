@@ -618,8 +618,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
               { value: 'arrow', label: 'Arrow' },
               { value: 'hand', label: 'Hand' },
               { value: 'bobbing', label: 'Bobbing' },
-              ...BRAND_CURSORS.map((c) => ({ value: c.style, label: c.label, title: c.title })),
-              { value: 'dot', label: 'Dot' }
+              { value: 'dot', label: 'Dot' },
+              ...BRAND_CURSORS.map((c) => ({ value: c.style, label: c.label, title: c.title }))
             ]}
           />
         </Row>

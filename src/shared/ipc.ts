@@ -206,9 +206,13 @@ export const EDITOR = {
 export type CursorMode = 'overlay' | 'system'
 
 /** Sprite the overlay pointer draws. Only meaningful when cursorMode is 'overlay'. */
-export type CursorSkin = 'agent' | 'halo' | 'star' | 'hand' | 'arrow' | 'arrow-dark' | 'ring' | 'dot' | 'crosshair' | 'sprite'
+export type CursorSkin = 'agent' | 'halo' | 'star' | 'arrow' | 'hand' | 'bobbing' | 'dot' | 'sprite'
 
-export const CURSOR_SKINS: readonly CursorSkin[] = ['agent', 'halo', 'star', 'hand', 'arrow', 'arrow-dark', 'ring', 'dot', 'crosshair', 'sprite']
+/** The same pointers, in the same order, as the editor's Cursor style. */
+export const CURSOR_SKINS: readonly CursorSkin[] = ['agent', 'halo', 'star', 'arrow', 'hand', 'bobbing', 'dot', 'sprite']
+
+/** Skins the record panel offered before it matched the editor, and the pointer each became. */
+export const LEGACY_CURSOR_SKINS: Readonly<Record<string, CursorSkin>> = { hermes: 'sprite', 'arrow-dark': 'arrow', ring: 'dot', crosshair: 'arrow' }
 
 /**
  * The hand reads as "I am pointing at this" rather than "I am a mouse", which is
