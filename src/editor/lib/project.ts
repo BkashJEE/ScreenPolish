@@ -56,7 +56,7 @@ export function normalizeZoomSound(raw: Partial<ZoomSoundSettings> | undefined):
  */
 export function migrateCursorStyle(style: unknown): Project['cursor']['style'] {
   if (style === 'hermes') return 'sprite'
-  const known: Array<Project['cursor']['style']> = ['arrow', 'dot', 'hand', 'bobbing', 'sprite', 'agent']
+  const known: Array<Project['cursor']['style']> = ['arrow', 'dot', 'hand', 'bobbing', 'sprite', 'agent', 'halo']
   return known.includes(style as Project['cursor']['style']) ? (style as Project['cursor']['style']) : DEFAULT_PROJECT.cursor.style
 }
 
