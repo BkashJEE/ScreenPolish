@@ -71,7 +71,23 @@ describe('drawTilted', () => {
     expect(draws[0]![8]).toBeGreaterThan(draws[119]![8])
     // Source x advances across the card.
     expect(draws[0]![1]).toBe(0)
-    expect(draws[119]![1]).toBeCloseTo((119 / 120) * 800, 6)
+    // Within half a source column: joins are snapped to whole output pixels.
+    expect(draws[119]![1]).toBeCloseTo((119 / 120) * 800, 0)
+  })
+
+  it('meets neighbouring strips on whole pixels, with no gap or overlap', () => {
+    const { ctx, calls } = fakeCtx()
+    drawTilted(ctx, {} as CanvasImageSource, { width: 800, height: 450 }, rect, 9, 2, 120)
+    const draws = bodies(calls, 450, 4)
+    for (const d of draws) {
+      expect(Number.isInteger(d[5])).toBe(true)
+      expect(Number.isInteger(d[5] + d[7])).toBe(true)
+    }
+    for (let i = 1; i < draws.length; i++) expect(draws[i]![5]).toBe(draws[i - 1]![5] + draws[i - 1]![7])
+    // Source columns run edge to edge with nothing skipped.
+    expect(draws[0]![1]).toBe(0)
+    const last = draws.at(-1)!
+    expect(last[1] + last[3]).toBeCloseTo(800, 6)
   })
 
   it('draws horizontal strips for a dominant tiltY', () => {
