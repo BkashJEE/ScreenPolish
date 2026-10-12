@@ -39,6 +39,12 @@ describe('sanitizeSettings', () => {
     expect(sanitizeSettings({ cursorSkin: 'hand' }, fallback).cursorSkin).toBe('hand')
     expect(sanitizeSettings({ cursorSkin: 'sparkle' }, fallback).cursorSkin).toBe('agent')
   })
+  it('moves the record panel\'s old pointer names to the pointer each was drawn as', () => {
+    expect(sanitizeSettings({ cursorSkin: 'arrow-dark' }, fallback).cursorSkin).toBe('arrow')
+    expect(sanitizeSettings({ cursorSkin: 'ring' }, fallback).cursorSkin).toBe('dot')
+    expect(sanitizeSettings({ cursorSkin: 'crosshair' }, fallback).cursorSkin).toBe('arrow')
+    expect(sanitizeSettings({ cursorSkin: 'hermes' }, fallback).cursorSkin).toBe('sprite')
+  })
 })
 
 describe('defaultRecordingsRoot', () => {

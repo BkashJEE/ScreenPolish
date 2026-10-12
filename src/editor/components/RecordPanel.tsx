@@ -454,13 +454,11 @@ export function RecordPanel({ recording, refreshKey }: { recording: RecordingSta
                   { value: 'agent', label: 'Agent' },
                   { value: 'halo', label: 'Halo' },
                   { value: 'star', label: 'Star' },
+                  { value: 'arrow', label: 'Arrow' },
                   { value: 'hand', label: 'Hand' },
-                  { value: 'arrow', label: 'Arrow (light)' },
-                  { value: 'arrow-dark', label: 'Arrow (dark)' },
-                  { value: 'ring', label: 'Ring' },
+                  { value: 'bobbing', label: 'Bobbing' },
                   { value: 'dot', label: 'Dot' },
-                  { value: 'crosshair', label: 'Crosshair' },
-                  ...BRAND_CURSORS.flatMap((c) => (c.liveSkin ? [{ value: c.liveSkin, label: `${c.label} (bobbing)` }] : []))
+                  ...BRAND_CURSORS.flatMap((c) => (c.liveSkin ? [{ value: c.liveSkin, label: c.label }] : []))
                 ]}
               />
             </Row>

@@ -209,7 +209,18 @@ export interface BundledBackground {
   id: string
   name: string
   path: string
+  group: BackgroundGroup
 }
+
+/** How the Background panel sorts the bundled set: loud, quiet, pale, and named themes. */
+export type BackgroundGroup = 'bright' | 'calm' | 'light' | 'theme'
+
+export const BACKGROUND_GROUPS: ReadonlyArray<{ id: BackgroundGroup; label: string }> = [
+  { id: 'bright', label: 'Bright' },
+  { id: 'calm', label: 'Calm' },
+  { id: 'light', label: 'Light' },
+  { id: 'theme', label: 'Themes' }
+]
 
 /**
  * Pack themes first, then the drawn set from scripts/backgrounds.py — meshes,
@@ -218,24 +229,24 @@ export interface BundledBackground {
  * build ships.
  */
 export const BUNDLED_BACKGROUNDS: BundledBackground[] = [
-  ...BRAND_THEMES.map((t) => ({ id: t.id, name: t.name, path: t.path })),
-  // Vivid first: loud colour around the take, for posts that have to stop a scroll.
-  { id: 'neon', name: 'Neon', path: 'bundled:backgrounds/neon.png' },
-  { id: 'prism', name: 'Prism', path: 'bundled:backgrounds/prism.png' },
-  { id: 'sunburst', name: 'Sunburst', path: 'bundled:backgrounds/sunburst.png' },
-  { id: 'electric', name: 'Electric', path: 'bundled:backgrounds/electric.png' },
-  { id: 'citrus', name: 'Citrus', path: 'bundled:backgrounds/citrus.png' },
-  { id: 'holo', name: 'Holo', path: 'bundled:backgrounds/holo.png' },
-  { id: 'candy', name: 'Candy', path: 'bundled:backgrounds/candy.png' },
-  { id: 'aurora', name: 'Aurora', path: 'bundled:backgrounds/aurora.png' },
-  { id: 'violet-haze', name: 'Violet Haze', path: 'bundled:backgrounds/violet-haze.png' },
-  { id: 'dawn', name: 'Dawn', path: 'bundled:backgrounds/dawn.png' },
-  { id: 'ember', name: 'Ember', path: 'bundled:backgrounds/ember.png' },
-  { id: 'slate-mesh', name: 'Slate Mesh', path: 'bundled:backgrounds/slate-mesh.png' },
-  { id: 'spotlight', name: 'Spotlight', path: 'bundled:backgrounds/spotlight.png' },
-  { id: 'grid', name: 'Grid', path: 'bundled:backgrounds/grid.png' },
-  { id: 'daylight', name: 'Daylight', path: 'bundled:backgrounds/daylight.png' },
-  { id: 'omarchy', name: 'Omarchy', path: 'bundled:backgrounds/omarchy.png' }
+  ...BRAND_THEMES.map((t) => ({ id: t.id, name: t.name, path: t.path, group: 'theme' as const })),
+  // Bright: loud colour around the take, for posts that have to stop a scroll.
+  { id: 'neon', name: 'Neon', path: 'bundled:backgrounds/neon.png', group: 'bright' },
+  { id: 'prism', name: 'Prism', path: 'bundled:backgrounds/prism.png', group: 'bright' },
+  { id: 'sunburst', name: 'Sunburst', path: 'bundled:backgrounds/sunburst.png', group: 'bright' },
+  { id: 'electric', name: 'Electric', path: 'bundled:backgrounds/electric.png', group: 'bright' },
+  { id: 'citrus', name: 'Citrus', path: 'bundled:backgrounds/citrus.png', group: 'bright' },
+  { id: 'holo', name: 'Holo', path: 'bundled:backgrounds/holo.png', group: 'light' },
+  { id: 'candy', name: 'Candy', path: 'bundled:backgrounds/candy.png', group: 'light' },
+  { id: 'aurora', name: 'Aurora', path: 'bundled:backgrounds/aurora.png', group: 'calm' },
+  { id: 'violet-haze', name: 'Violet Haze', path: 'bundled:backgrounds/violet-haze.png', group: 'calm' },
+  { id: 'dawn', name: 'Dawn', path: 'bundled:backgrounds/dawn.png', group: 'calm' },
+  { id: 'ember', name: 'Ember', path: 'bundled:backgrounds/ember.png', group: 'calm' },
+  { id: 'slate-mesh', name: 'Slate Mesh', path: 'bundled:backgrounds/slate-mesh.png', group: 'calm' },
+  { id: 'spotlight', name: 'Spotlight', path: 'bundled:backgrounds/spotlight.png', group: 'calm' },
+  { id: 'grid', name: 'Grid', path: 'bundled:backgrounds/grid.png', group: 'calm' },
+  { id: 'daylight', name: 'Daylight', path: 'bundled:backgrounds/daylight.png', group: 'light' },
+  { id: 'omarchy', name: 'Omarchy', path: 'bundled:backgrounds/omarchy.png', group: 'theme' }
 ]
 
 export const BUNDLED_PREFIX = 'bundled:'

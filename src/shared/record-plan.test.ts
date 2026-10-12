@@ -50,6 +50,13 @@ describe('normalizePlan', () => {
     expect(normalizePlan({ ...good, durationSec: 1 })!.durationSec).toBe(PLAN_MIN_SEC)
   })
 
+  it('offers the editor\'s pointers, and reads the old ring as the dot', () => {
+    for (const pointer of ['agent', 'halo', 'star', 'arrow', 'hand', 'bobbing', 'dot']) {
+      expect(normalizePlan({ ...good, look: { pointer } })!.look.pointer).toBe(pointer)
+    }
+    expect(normalizePlan({ ...good, look: { pointer: 'ring' } })!.look.pointer).toBe('dot')
+  })
+
   it('keeps shot times inside the recording', () => {
     const plan = normalizePlan({ ...good, durationSec: 20, shots: [{ atSec: 90, action: 'end' }, { atSec: -3, action: 'start' }] })!
     expect(plan.shots).toEqual([{ atSec: 0, action: 'start' }, { atSec: 20, action: 'end' }])

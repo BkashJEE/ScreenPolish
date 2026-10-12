@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROJECT } from '../../shared/types'
 import { BRAND_THEMES } from '../../brand'
-import { BUNDLED_BACKGROUNDS, SOLID_PRESETS, migrateCursorStyle, backgroundCss, imageUrlForPath, matchPreset, matchSolidPreset, normalizeProject, patchGroup, projectEquals } from './project'
+import { BACKGROUND_GROUPS, BUNDLED_BACKGROUNDS, SOLID_PRESETS, migrateCursorStyle, backgroundCss, imageUrlForPath, matchPreset, matchSolidPreset, normalizeProject, patchGroup, projectEquals } from './project'
 
 describe('bundled background themes', () => {
   /** Drawn by scripts/backgrounds.py, so every build ships these. */
@@ -14,6 +14,15 @@ describe('bundled background themes', () => {
       const relative = background.path.replace('bundled:', '')
       expect(imageUrlForPath(background.path)).toBe(`polish://asset/${relative}`)
     }
+  })
+
+  it('puts every background in a group the panel shows, bright ones first', () => {
+    const groups = BACKGROUND_GROUPS.map((g) => g.id)
+    for (const b of BUNDLED_BACKGROUNDS) expect(groups).toContain(b.group)
+    expect(groups[0]).toBe('bright')
+    expect(BUNDLED_BACKGROUNDS.filter((b) => b.group === 'bright').map((b) => b.id)).toEqual(['neon', 'prism', 'sunburst', 'electric', 'citrus'])
+    expect(BUNDLED_BACKGROUNDS.filter((b) => b.group === 'light').map((b) => b.id)).toEqual(['holo', 'candy', 'daylight'])
+    expect(BUNDLED_BACKGROUNDS.find((b) => b.id === 'omarchy')!.group).toBe('theme')
   })
 
   it('gives every background its own id and its own file', () => {

@@ -91,6 +91,24 @@ const MAX_STRIP_STEP_PX = 0.5
 const EDGE_BLEED_PX = 2
 
 /**
+ * Snap a coordinate to a whole device pixel under the context's current
+ * scale and offset, so neighbouring strips meet exactly on a pixel boundary.
+ * Strips that met between pixels both half-covered that column, and the two
+ * half-covers blended into a faint line down the card at every join.
+ */
+function pixelSnapper(ctx: Ctx2D): { x: (v: number) => number; y: (v: number) => number } {
+  const m = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
+  const sx = m && m.a ? m.a : 1
+  const sy = m && m.d ? m.d : 1
+  const ox = m ? m.e : 0
+  const oy = m ? m.f : 0
+  return {
+    x: (v) => (Math.round(v * sx + ox) - ox) / sx,
+    y: (v) => (Math.round(v * sy + oy) - oy) / sy
+  }
+}
+
+/**
  * Clip to the two edges the strips step along, as exact lines, leaving the
  * other two sides alone: those are the strips' own straight ends.
  * `a0 → a1` and `b0 → b1` are the stepping edges, extended `margin` px past
@@ -142,39 +160,45 @@ export function drawTilted(
   ctx.save()
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
+  const snap = pixelSnapper(ctx)
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
   if (vertical) {
-    // Vertical strips: walk left to right. Each strip's top and bottom come from
-    // the projected top and bottom edges at the middle of the strip.
+    // Vertical strips: walk left to right. Each strip spans whole pixel columns,
+    // and its top and bottom come from the projected edges at its middle.
     clipToEdges(ctx, q.tl, q.tr, q.br, q.bl, margin)
+    const span = q.tr.x - q.tl.x || 1
     for (let i = 0; i < n; i++) {
-      const u0 = i / n
-      const u1 = (i + 1) / n
+      const xa = snap.x(lerp(q.tl.x, q.tr.x, i / n))
+      const xb = snap.x(lerp(q.tl.x, q.tr.x, (i + 1) / n))
+      if (!(xb > xa)) continue
+      // The outer ends always take the source's first and last columns.
+      const u0 = i === 0 ? 0 : clamp01((xa - q.tl.x) / span)
+      const u1 = i === n - 1 ? 1 : clamp01((xb - q.tl.x) / span)
       const um = (u0 + u1) / 2
-      const xa = lerp(q.tl.x, q.tr.x, u0)
-      const xb = lerp(q.tl.x, q.tr.x, u1)
       const top = lerp(q.tl.y, q.tr.y, um)
       const bottom = lerp(q.bl.y, q.br.y, um)
-      // +0.6 px overlap hides seams between strips after smoothing.
-      const dw = xb - xa + 0.6
       const sx = u0 * sw
-      const sliceW = Math.max(1, sw / n)
+      const sliceW = Math.max(1e-3, (u1 - u0) * sw)
+      const dw = xb - xa
       ctx.drawImage(source, sx, 0, sliceW, sh, xa, top, dw, bottom - top)
       ctx.drawImage(source, sx, 0, sliceW, 1, xa, top - EDGE_BLEED_PX, dw, EDGE_BLEED_PX)
       ctx.drawImage(source, sx, sh - 1, sliceW, 1, xa, bottom, dw, EDGE_BLEED_PX)
     }
   } else {
     clipToEdges(ctx, q.tl, q.bl, q.br, q.tr, margin)
+    const span = q.bl.y - q.tl.y || 1
     for (let i = 0; i < n; i++) {
-      const v0 = i / n
-      const v1 = (i + 1) / n
+      const ya = snap.y(lerp(q.tl.y, q.bl.y, i / n))
+      const yb = snap.y(lerp(q.tl.y, q.bl.y, (i + 1) / n))
+      if (!(yb > ya)) continue
+      const v0 = i === 0 ? 0 : clamp01((ya - q.tl.y) / span)
+      const v1 = i === n - 1 ? 1 : clamp01((yb - q.tl.y) / span)
       const vm = (v0 + v1) / 2
-      const ya = lerp(q.tl.y, q.bl.y, v0)
-      const yb = lerp(q.tl.y, q.bl.y, v1)
       const left = lerp(q.tl.x, q.bl.x, vm)
       const right = lerp(q.tr.x, q.br.x, vm)
-      const dh = yb - ya + 0.6
       const sy = v0 * sh
-      const sliceH = Math.max(1, sh / n)
+      const sliceH = Math.max(1e-3, (v1 - v0) * sh)
+      const dh = yb - ya
       ctx.drawImage(source, 0, sy, sw, sliceH, left, ya, right - left, dh)
       ctx.drawImage(source, 0, sy, 1, sliceH, left - EDGE_BLEED_PX, ya, EDGE_BLEED_PX, dh)
       ctx.drawImage(source, sw - 1, sy, 1, sliceH, right, ya, EDGE_BLEED_PX, dh)

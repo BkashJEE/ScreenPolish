@@ -4,7 +4,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { app } from 'electron'
-import { CURSOR_SKINS, DEFAULT_CURSOR_SKIN, type AppSettings, type CursorMode, type CursorSkin } from '@shared/ipc'
+import { CURSOR_SKINS, DEFAULT_CURSOR_SKIN, LEGACY_CURSOR_SKINS, type AppSettings, type CursorMode, type CursorSkin } from '@shared/ipc'
 import { DEFAULT_SHORTCUTS, validateShortcuts } from '@shared/shortcuts'
 
 const FILE = 'settings.json'
@@ -46,8 +46,9 @@ export function sanitizeSettings(raw: unknown, fallbackRoot: string): AppSetting
   // Hyprland's portal capture omits its visible cursor, so Linux must redraw
   // the tracked pointer. macOS still captures the real pointer as-is.
   const mode: CursorMode = process.platform === 'linux' ? 'overlay' : process.platform !== 'win32' || r.cursorMode === 'system' ? 'system' : 'overlay'
-  // The pack's overlay skin was called `hermes` before packs existed; keep old settings working.
-  const rawSkin = r.cursorSkin === 'hermes' ? 'sprite' : r.cursorSkin
+  // Older names (the pack's `hermes`, and the record panel's own arrow-dark,
+  // ring and crosshair) become the pointer they were drawn as in the editor.
+  const rawSkin = typeof r.cursorSkin === 'string' ? (LEGACY_CURSOR_SKINS[r.cursorSkin] ?? r.cursorSkin) : r.cursorSkin
   const skin: CursorSkin = CURSOR_SKINS.includes(rawSkin as CursorSkin) ? (rawSkin as CursorSkin) : DEFAULT_CURSOR_SKIN
   let shortcuts = { ...DEFAULT_SHORTCUTS }
   try { if (r.shortcuts) shortcuts = validateShortcuts(r.shortcuts) } catch { /* damaged settings use safe defaults */ }

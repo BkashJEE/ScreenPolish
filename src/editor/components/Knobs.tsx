@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, type ReactNode } from 'react'
-import { AGENT_POINTER_COLOR, STAR_POINTER_COLOR } from '../../render/render-frame'
+import { AGENT_POINTER_COLOR, STAR_POINTER_COLOR, pointerHasOwnClick } from '../../render/render-frame'
 import type { FolderBackground, MusicTrack } from '../../shared/ipc'
 import { BUNDLED_MUSIC } from '../../shared/bundled-music'
 import { CLICK_SOUND_STYLES, DEFAULT_CLICK_SOUND, type ClickSoundStyle } from '../../shared/click-sound'
@@ -16,7 +16,7 @@ import { baseName } from '../lib/media'
 import { PACK_PLATE_INK } from '../../brand'
 import { BRAND_CURSORS, BRAND_THEMES } from '../../brand'
 import { BannerMark } from '../../brand/ui'
-import { GRADIENT_PRESETS, SOLID_PRESETS, backgroundCss, matchPreset, matchSolidPreset, patchGroup, BUNDLED_BACKGROUNDS, imageUrlForPath } from '../lib/project'
+import { GRADIENT_PRESETS, SOLID_PRESETS, backgroundCss, matchPreset, matchSolidPreset, patchGroup, BUNDLED_BACKGROUNDS, BACKGROUND_GROUPS, imageUrlForPath } from '../lib/project'
 import { clampFocus, type SegmentPatch } from '../lib/segments'
 import { formatTime } from '../lib/time'
 import { ImageIcon, Trash, Undo, X } from './icons'
@@ -360,36 +360,48 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
       </Section>
 
       <Section title="Background" right={<span className="h-4 w-4 rounded-[4px] border border-line-strong" style={{ background: backgroundCss(bg) }} />}>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Background themes">
-          {BUNDLED_BACKGROUNDS.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              aria-label={`Choose ${b.name} background`}
-              aria-pressed={bg.kind === 'image' && bg.imagePath === b.path}
-              onClick={() => set('background', { kind: 'image', imagePath: b.path, lettering: THEME_LETTERING[b.id] !== undefined })}
-              className={cx(
-                'overflow-hidden rounded-[6px] border text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg',
-                bg.kind === 'image' && bg.imagePath === b.path ? 'border-fg ring-1 ring-fg' : 'border-line-strong'
-              )}
-            >
-              <span className="block aspect-video" style={{ backgroundImage: `url(${imageUrlForPath(b.path)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-              {/* A theme shows its wordmark; everything else says what it is. The
-                  drawn backgrounds are dark and similar at this size, and an
-                  unlabelled tile is not a choice anyone can make. */}
-              {BRAND_THEMES.some((t) => t.id === b.id) ? (
-                <span className="flex h-9 items-center px-2" style={{ background: PACK_PLATE_INK }}>
-                  <BannerMark className="h-4 w-full" />
-                </span>
-              ) : b.id === 'omarchy' ? (
-                <span className="block px-2 py-1 text-xl" aria-hidden="true" style={{ fontFamily: '"Omarchy Brand"' }}>
-                  {'\ue900'}
-                </span>
-              ) : (
-                <span className="block truncate px-2 py-1.5 text-[11px] text-fg-dim">{b.name}</span>
-              )}
-            </button>
-          ))}
+        {/* Sorted into groups: fifteen tiles in one grid was a list to scroll, not a choice. */}
+        <div className="flex flex-col gap-3" role="group" aria-label="Background themes">
+          {BACKGROUND_GROUPS.map((group) => {
+            const items = BUNDLED_BACKGROUNDS.filter((b) => b.group === group.id)
+            if (items.length === 0) return null
+            return (
+              <div key={group.id} className="flex flex-col gap-2">
+                <span className="text-[10.5px] uppercase tracking-wide text-fg-dim">{group.label}</span>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label={`${group.label} backgrounds`}>
+                  {items.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      aria-label={`Choose ${b.name} background`}
+                      aria-pressed={bg.kind === 'image' && bg.imagePath === b.path}
+                      onClick={() => set('background', { kind: 'image', imagePath: b.path, lettering: THEME_LETTERING[b.id] !== undefined })}
+                      className={cx(
+                        'overflow-hidden rounded-[6px] border text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg',
+                        bg.kind === 'image' && bg.imagePath === b.path ? 'border-fg ring-1 ring-fg' : 'border-line-strong'
+                      )}
+                    >
+                      <span className="block aspect-video" style={{ backgroundImage: `url(${imageUrlForPath(b.path)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                      {/* A theme shows its wordmark; everything else says what it is. The
+                          drawn backgrounds are dark and similar at this size, and an
+                          unlabelled tile is not a choice anyone can make. */}
+                      {BRAND_THEMES.some((t) => t.id === b.id) ? (
+                        <span className="flex h-9 items-center px-2" style={{ background: PACK_PLATE_INK }}>
+                          <BannerMark className="h-4 w-full" />
+                        </span>
+                      ) : b.id === 'omarchy' ? (
+                        <span className="block px-2 py-1 text-xl" aria-hidden="true" style={{ fontFamily: '"Omarchy Brand"' }}>
+                          {'\ue900'}
+                        </span>
+                      ) : (
+                        <span className="block truncate px-2 py-1.5 text-[11px] text-fg-dim">{b.name}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
         <FolderBackgrounds selected={bg.kind === 'image' ? bg.imagePath : undefined} onPick={(imagePath) => set('background', { kind: 'image', imagePath, lettering: false })} />
         {themeLettering && (
@@ -619,8 +631,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
               { value: 'arrow', label: 'Arrow' },
               { value: 'hand', label: 'Hand' },
               { value: 'bobbing', label: 'Bobbing' },
-              ...BRAND_CURSORS.map((c) => ({ value: c.style, label: c.label, title: c.title })),
-              { value: 'dot', label: 'Dot' }
+              { value: 'dot', label: 'Dot' },
+              ...BRAND_CURSORS.map((c) => ({ value: c.style, label: c.label, title: c.title }))
             ]}
           />
         </Row>
@@ -649,10 +661,18 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         <p className="text-[11px] leading-[1.4] text-fg-muted">
           If the screen reacts after the click, move this up until the click lands as the button changes. It moves the pointer, clicks and zooms together.
         </p>
-        <Row label="Click ripples">
-          <Toggle checked={project.cursor.ripple} onChange={(ripple) => set('cursor', { ripple })} label="Click ripples" />
-        </Row>
-        <Row label="Click bounce"><Toggle checked={project.cursor.bounce ?? false} onChange={(bounce) => set('cursor', { bounce })} label="Click bounce" /></Row>
+        {pointerHasOwnClick(project.cursor.style) ? (
+          <p className="text-[11px] leading-[1.4] text-fg-muted">
+            {project.cursor.style === 'halo' ? 'Halo tightens on each click' : 'Star throws sparkles on each click'}, so click ripples and bounce are off for it.
+          </p>
+        ) : (
+          <>
+            <Row label="Click ripples">
+              <Toggle checked={project.cursor.ripple} onChange={(ripple) => set('cursor', { ripple })} label="Click ripples" />
+            </Row>
+            <Row label="Click bounce"><Toggle checked={project.cursor.bounce ?? false} onChange={(bounce) => set('cursor', { bounce })} label="Click bounce" /></Row>
+          </>
+        )}
         <Row label="Loop cursor"><Toggle checked={project.cursor.loop ?? false} onChange={(loop) => set('cursor', { loop })} label="Loop cursor" /></Row>
         <SliderField label="Cursor sway" value={project.cursor.sway ?? 0} min={0} max={1} step={0.05} onChange={(sway) => set('cursor', { sway })} format={pct} />
         <SliderField label="Motion trail" value={project.cursor.motionBlur ?? 0} min={0} max={1} step={0.05} onChange={(motionBlur) => set('cursor', { motionBlur })} format={pct} />

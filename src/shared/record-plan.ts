@@ -15,7 +15,7 @@ import { normalizeScenes, type Scene } from './scenes'
 export type PlanSourceKind = 'screen' | 'window' | 'region'
 export type PlanAspect = '16:9' | '9:16' | '1:1'
 /** The record panel's pointer styles an agent may pick from. */
-export type PlanPointer = 'hand' | 'arrow' | 'dot' | 'ring'
+export type PlanPointer = 'agent' | 'halo' | 'star' | 'arrow' | 'hand' | 'bobbing' | 'dot'
 
 export interface PlanShot {
   /** Seconds from the start of the recording. */
@@ -97,7 +97,8 @@ export function normalizePlan(raw: unknown): RecordPlan | null {
   if (aspect) look.aspect = aspect
   const fps = oneOf(Number(lookRaw.fps), [30, 60] as const)
   if (fps) look.fps = fps
-  const pointer = oneOf(lookRaw.pointer, ['hand', 'arrow', 'dot', 'ring'] as const)
+  // `ring` was offered before the lists matched; it was always drawn as the dot.
+  const pointer = oneOf(lookRaw.pointer === 'ring' ? 'dot' : lookRaw.pointer, ['agent', 'halo', 'star', 'arrow', 'hand', 'bobbing', 'dot'] as const)
   if (pointer) look.pointer = pointer
   if (typeof lookRaw.mic === 'boolean') look.mic = lookRaw.mic
   if (typeof lookRaw.systemAudio === 'boolean') look.systemAudio = lookRaw.systemAudio
@@ -166,7 +167,7 @@ const SHAPE = `{
   "source": { "kind": "screen" | "window" | "region", "target": "a screen or window name from the list", "reason": "why this angle" },
   "durationSec": 45,
   "shots": [ { "atSec": 0, "action": "what to do on screen" } ],
-  "look": { "aspect": "16:9" | "9:16" | "1:1", "fps": 30 | 60, "pointer": "hand" | "arrow" | "dot" | "ring", "mic": true, "systemAudio": false, "background": ["#1f2a44", "#6a3d9a"] },
+  "look": { "aspect": "16:9" | "9:16" | "1:1", "fps": 30 | 60, "pointer": "agent" | "halo" | "star" | "arrow" | "hand" | "bobbing" | "dot", "mic": true, "systemAudio": false, "background": ["#1f2a44", "#6a3d9a"] },
   "scenes": [
     { "kind": "intro", "style": "calm" | "bold", "title": "…", "subtitle": "…", "steps": ["…"], "durationSec": 3 },
     { "kind": "outro", "style": "calm" | "bold", "title": "…", "subtitle": "…", "durationSec": 2.5 }
