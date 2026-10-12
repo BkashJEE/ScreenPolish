@@ -1,6 +1,7 @@
 // Immutable Project editing helpers and presets. Pure, tested.
 
 import { BRAND_THEMES } from '../../brand'
+import { clampSync } from '../../shared/input-sync'
 import { normalizeScenes } from '../../shared/scenes'
 import { DEFAULT_PROJECT, type Project } from '../../shared/types'
 import { DEFAULT_ZOOM_SOUND, type ZoomSoundSettings } from '../../shared/zoom-sound'
@@ -85,7 +86,7 @@ export function normalizeProject(raw: Partial<Project> | null | undefined): Proj
     },
     mockup: { ...DEFAULT_PROJECT.mockup, ...(p.mockup ?? {}) },
     animation: normalizeAnimation(p.animation),
-    cursor: { ...DEFAULT_PROJECT.cursor, ...(p.cursor ?? {}), style: migrateCursorStyle(p.cursor?.style), clickSound: normalizeClickSound(p.cursor?.clickSound ?? (typeof p.audio?.clickSounds === 'boolean' ? { enabled: p.audio.clickSounds } : undefined)) },
+    cursor: { ...DEFAULT_PROJECT.cursor, ...(p.cursor ?? {}), style: migrateCursorStyle(p.cursor?.style), ...(p.cursor?.syncSec !== undefined ? { syncSec: clampSync(p.cursor.syncSec) } : {}), clickSound: normalizeClickSound(p.cursor?.clickSound ?? (typeof p.audio?.clickSounds === 'boolean' ? { enabled: p.audio.clickSounds } : undefined)) },
     zoom: {
       ...DEFAULT_PROJECT.zoom,
       ...(p.zoom ?? {}),

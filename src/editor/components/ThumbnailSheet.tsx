@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { syncEvents } from '../../shared/input-sync'
 import type { ImageFormat, LoadedProject } from '../../shared/ipc'
 import type { Project, ZoomSegment } from '../../shared/types'
 import { outputSize } from '../../shared/layout'
@@ -81,7 +82,7 @@ export function ThumbnailSheet(props: ThumbnailSheetProps) {
       video,
       videoSize: l.videoSize,
       tSec,
-      events: loaded.events,
+      events: syncEvents(loaded.events, l.project.cursor.syncSec),
       project: l.project,
       segments: l.segments,
       pointerPath: l.pointerPath,
