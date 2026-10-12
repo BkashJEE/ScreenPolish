@@ -613,6 +613,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             onChange={(style) => set('cursor', { style })}
             options={[
               { value: 'agent', label: 'Agent' },
+              { value: 'halo', label: 'Halo' },
               { value: 'arrow', label: 'Arrow' },
               { value: 'hand', label: 'Hand' },
               { value: 'bobbing', label: 'Bobbing' },
@@ -621,9 +622,9 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             ]}
           />
         </Row>
-        {project.cursor.style === 'agent' && (
+        {(project.cursor.style === 'agent' || project.cursor.style === 'halo') && (
           <Row label="Colour">
-            <ColorField value={project.cursor.color ?? AGENT_POINTER_COLOR} onChange={(color) => set('cursor', { color })} />
+            <ColorField value={project.cursor.color ?? (project.cursor.style === 'halo' ? '#ffffff' : AGENT_POINTER_COLOR)} onChange={(color) => set('cursor', { color })} />
           </Row>
         )}
         <SliderField label="Size" value={project.cursor.size} min={0} max={3} step={0.05} onChange={(size) => set('cursor', { size })} format={(v) => (v === 0 ? 'Hidden' : `${v.toFixed(2)}x`)} />

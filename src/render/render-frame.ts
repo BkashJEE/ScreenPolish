@@ -462,6 +462,61 @@ function traceAgentArrow(ctx: Ctx2D): void {
   ctx.closePath()
 }
 
+/** How far behind the dot the Halo's ring runs, in seconds of pointer path. */
+export const HALO_RING_LAG_SEC = 0.09
+/** The ring never strays further than this many pointer sizes from the dot. */
+export const HALO_MAX_OFFSET = 1.4
+
+/**
+ * How tightly the Halo's ring is pressed, 0 to 1, `ageSec` after a click: it
+ * closes quickly on the press and opens again over a third of a second.
+ */
+export function haloPressAt(ageSec: number): number {
+  if (!(ageSec >= 0) || ageSec >= 0.38) return 0
+  if (ageSec < 0.08) return ageSec / 0.08
+  const t = (ageSec - 0.08) / 0.3
+  return 1 - t * t * (3 - 2 * t)
+}
+
+/** The ring's offset from the dot, shortened to HALO_MAX_OFFSET so a fast flick never leaves it far behind. */
+export function haloRingOffset(dx: number, dy: number, sizePx: number): { dx: number; dy: number } {
+  const max = HALO_MAX_OFFSET * sizePx
+  const d = Math.hypot(dx, dy)
+  if (!(d > max)) return { dx, dy }
+  return { dx: (dx / d) * max, dy: (dy / d) * max }
+}
+
+/**
+ * The Halo pointer: a small dot on the hotspot and a thin ring that floats a
+ * moment behind it, tightening on a click. The ring has a faint dark edge so
+ * it holds on white pages; the dot takes the pointer colour, white by default.
+ */
+export function drawHalo(ctx: Ctx2D, x: number, y: number, ringX: number, ringY: number, sizePx: number, press: number, color?: string): void {
+  if (!(sizePx > 0)) return
+  const k = Math.min(1, Math.max(0, press || 0))
+  const ring = sizePx * 0.62 * (1 - 0.3 * k)
+  const line = Math.max(1, sizePx * 0.07)
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(ringX, ringY, ring, 0, Math.PI * 2)
+  ctx.fillStyle = `rgba(255, 255, 255, ${(0.06 + 0.14 * k).toFixed(3)})`
+  ctx.fill()
+  ctx.lineWidth = line * 2.2
+  ctx.strokeStyle = 'rgba(14, 20, 28, 0.32)'
+  ctx.stroke()
+  ctx.lineWidth = line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)'
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(x, y, sizePx * 0.17, 0, Math.PI * 2)
+  ctx.fillStyle = color && /^#[0-9a-f]{6}$/i.test(color) ? color : '#ffffff'
+  ctx.fill()
+  ctx.lineWidth = Math.max(1, sizePx * 0.05)
+  ctx.strokeStyle = 'rgba(14, 20, 28, 0.55)'
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function drawCursor(ctx: Ctx2D, x: number, y: number, sizePx: number, style: Project['cursor']['style'], color?: string): void {
   if (!(sizePx > 0)) return
   ctx.save()
@@ -482,6 +537,13 @@ export function drawCursor(ctx: Ctx2D, x: number, y: number, sizePx: number, sty
     ctx.stroke()
     ctx.fillStyle = color && /^#[0-9a-f]{6}$/i.test(color) ? color : AGENT_POINTER_COLOR
     ctx.fill()
+    ctx.restore()
+    return
+  }
+
+  if (style === 'halo') {
+    // Without a path to lag along (trails, previews), the ring sits centred.
+    drawHalo(ctx, 0, 0, 0, 0, sizePx, 0, color)
     ctx.restore()
     return
   }
@@ -892,7 +954,8 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
       const age = lastClick ? input.tSec - lastClick.t / 1000 : 1
       const bobbing = project.cursor.style === 'bobbing'
       const hand = project.cursor.style === 'hand'
-      const bounce = !bobbing && !hand && project.cursor.bounce && age < 0.32 ? 1 - 0.22 * Math.sin(Math.PI * age / 0.32) : 1
+      const halo = project.cursor.style === 'halo'
+      const bounce = !bobbing && !hand && !halo && project.cursor.bounce && age < 0.32 ? 1 - 0.22 * Math.sin(Math.PI * age / 0.32) : 1
       const trails = Math.round(Math.min(1, Math.max(0, project.cursor.motionBlur ?? 0)) * 5)
       for (let i = trails; i > 0; i--) {
         const past = smoothedPointerAt(input.pointerPath, Math.max(trim.start, input.tSec - i * 0.012))
@@ -918,6 +981,17 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
           if (!drawKnight(card, knight.x, knight.y, knight.size, knight.pose, input.tSec)) drawCursor(card, knight.x, knight.y, knight.size, 'arrow')
           knight = null
         }
+      } else if (halo) {
+        // The ring follows the dot along the same path a moment later, so it
+        // trails a move and settles back over the dot when the pointer rests.
+        const size = CURSOR_BASE_PX * project.cursor.size * mapping.scale
+        const lagged = smoothedPointerAt(input.pointerPath, Math.max(trim.start, input.tSec - HALO_RING_LAG_SEC))
+        const localLagged = lagged ? sourceToCroppedPoint(lagged, geometry.crop) : null
+        const localNow = sourceToCroppedPoint(pointer, geometry.crop)
+        const offset = localLagged
+          ? haloRingOffset(mapping.scale * (localLagged.x - localNow.x), mapping.scale * (localLagged.y - localNow.y), size)
+          : { dx: 0, dy: 0 }
+        drawHalo(card, px, py, px + offset.dx, py + offset.dy, size, haloPressAt(age), project.cursor.color)
       } else {
       const sway = Math.min(1, Math.max(0, project.cursor.sway ?? 0))
       if (sway > 0 || bobbing || hand) {
