@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROJECT, type Project } from './types'
-import { WEBCAM_INSET, contentRect, effectiveTrim, outputSize, webcamRect } from './layout'
+import { WEBCAM_INSET, WEBCAM_MAX_MARGIN, contentRect, effectiveTrim, outputSize, webcamRect } from './layout'
 
 function project(output: Partial<Project['output']>): Project {
   return { ...DEFAULT_PROJECT, output: { ...DEFAULT_PROJECT.output, ...output } }
@@ -137,6 +137,23 @@ describe('webcamRect', () => {
     expect(r.height).toBeCloseTo(side)
     const tall = webcamRect({ width: 1080, height: 1920 }, webcam('br'))
     expect(tall.width).toBeCloseTo(side)
+  })
+
+  it('takes a chosen margin, kept within reason', () => {
+    expect(webcamRect(hd, { ...webcam('tl'), margin: 0 })).toMatchObject({ x: 0, y: 0 })
+    expect(webcamRect(hd, { ...webcam('tl'), margin: 0.1 })).toMatchObject({ x: 108, y: 108 })
+    expect(webcamRect(hd, { ...webcam('tl'), margin: 9 }).x).toBeCloseTo(WEBCAM_MAX_MARGIN * 1080)
+  })
+
+  it('places the bubble by hand across the space it can move in, over the corner', () => {
+    expect(webcamRect(hd, { ...webcam('br'), place: { x: 0, y: 0 } })).toMatchObject({ x: inset, y: inset })
+    expect(webcamRect(hd, { ...webcam('tl'), place: { x: 1, y: 1 } })).toMatchObject({ x: 1920 - inset - side, y: 1080 - inset - side })
+    const mid = webcamRect(hd, { ...webcam('tl'), place: { x: 0.5, y: 0.5 } })
+    expect(mid.x + side / 2).toBeCloseTo(960)
+    expect(mid.y + side / 2).toBeCloseTo(540)
+    // Out-of-range or broken placements stay on the frame.
+    expect(webcamRect(hd, { ...webcam('tl'), place: { x: 4, y: -2 } })).toMatchObject({ x: 1920 - inset - side, y: inset })
+    expect(webcamRect(hd, { ...webcam('br'), place: { x: NaN, y: 0 } })).toMatchObject({ x: 1920 - inset - side, y: 1080 - inset - side })
   })
 
   it('sits 3% of the shorter side from the chosen corner', () => {

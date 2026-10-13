@@ -1257,7 +1257,7 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
   drawCaptions(ctx, output, project.captions, input.tSec)
 }
 
-function drawWebcam(
+export function drawWebcam(
   ctx: Ctx2D,
   output: { width: number; height: number },
   webcam: CanvasImageSource,
@@ -1270,11 +1270,12 @@ function drawWebcam(
   if (src.width <= 0 || src.height <= 0) return
   const radius = cfg.round ? Math.min(rect.width, rect.height) / 2 : Math.min(rect.width, rect.height) * 0.12
 
+  const shadow = Number.isFinite(cfg.shadow) ? Math.min(1, Math.max(0, cfg.shadow as number)) : 1
   ctx.save()
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)'
-  ctx.shadowBlur = minSide * 0.03
+  ctx.shadowColor = `rgba(0, 0, 0, ${(0.35 * shadow).toFixed(3)})`
+  ctx.shadowBlur = minSide * 0.03 * shadow
   ctx.shadowOffsetX = 0
-  ctx.shadowOffsetY = minSide * 0.008
+  ctx.shadowOffsetY = minSide * 0.008 * shadow
   ctx.fillStyle = '#000000'
   roundedRectPath(ctx, rect.x, rect.y, rect.width, rect.height, radius)
   ctx.fill()
@@ -1283,6 +1284,11 @@ function drawWebcam(
   ctx.save()
   roundedRectPath(ctx, rect.x, rect.y, rect.width, rect.height, radius)
   ctx.clip()
+  if (cfg.mirror) {
+    // Flip about the bubble's own centre line, so it stays where it is.
+    ctx.translate(2 * rect.x + rect.width, 0)
+    ctx.scale(-1, 1)
+  }
   // Framing, backdrop and lighting all live in webcam-look; this stays
   // responsible only for the bubble's shape and shadow.
   drawWebcamLook({ ctx, webcam, source: src, rect, look: cfg.look ?? DEFAULT_WEBCAM_LOOK })

@@ -224,7 +224,23 @@ export interface Project {
     /** Soft whoosh under each zoom in, zoom out and pan. */
     sound?: ZoomSoundSettings
   }
-  webcam: { enabled: boolean; corner: WebcamCorner; size: number; round: boolean; reactive?: boolean; /** Absent in projects saved before the look existed. */ look?: WebcamLook }
+  webcam: {
+    enabled: boolean
+    corner: WebcamCorner
+    size: number
+    round: boolean
+    reactive?: boolean
+    /** Absent in projects saved before the look existed. */
+    look?: WebcamLook
+    /** Flip the camera left to right, as a mirror shows you. */
+    mirror?: boolean
+    /** Where the bubble sits instead of a corner: 0..1 across and down the space it can move in. Absent = the corner. */
+    place?: { x: number; y: number }
+    /** Gap to the frame edge, as a share of the shorter side; absent = WEBCAM_INSET. */
+    margin?: number
+    /** 0..1 strength of the drop shadow; absent = 1. */
+    shadow?: number
+  }
   audio: { mic: boolean; system: boolean; micVolume: number; systemVolume: number; masterVolume: number; /** Legacy on/off from early window-tracking builds; migrated into cursor.clickSound. */ clickSounds?: boolean }
   overlays: Overlay[]
   /** Animated cards before and after the recording. See shared/scenes.ts. */
