@@ -92,28 +92,9 @@
         </g>
       </svg>
 
-      <svg class="skin" data-skin="arrow-dark" style="left: -3px; top: -3px" width="21" height="28" viewBox="-3 -3 21 28" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="dark-body" x1="0" y1="0" x2="0.8" y2="1">
-            <stop offset="0" stop-color="#4a4e59" />
-            <stop offset="0.5" stop-color="#2b2e37" />
-            <stop offset="1" stop-color="#14161c" />
-          </linearGradient>
-          <clipPath id="dark-clip">
-            <path d="M0 0 L0 18 L4.75 13.4 L8.2 21.3 L11.95 19.66 L8.5 11.95 L14.83 11.66 Z" />
-          </clipPath>
-        </defs>
-        <path
-          d="M0 0 L0 18 L4.75 13.4 L8.2 21.3 L11.95 19.66 L8.5 11.95 L14.83 11.66 Z"
-          fill="url(#dark-body)"
-          stroke="#f2f3f6"
-          stroke-width="1.5"
-          stroke-linejoin="round"
-        />
-        <g clip-path="url(#dark-clip)" fill="none" stroke-linejoin="round">
-          <path d="M0 0 L0 18 L4.75 13.4 L8.2 21.3 L11.95 19.66 L8.5 11.95 L14.83 11.66 Z" transform="translate(1.05 1.05)" stroke="#8f96a6" stroke-width="1.6" opacity="0.75" />
-          <path d="M0 0 L0 18 L4.75 13.4 L8.2 21.3 L11.95 19.66 L8.5 11.95 L14.83 11.66 Z" transform="translate(-1.05 -1.05)" stroke="#000000" stroke-width="1.5" opacity="0.55" />
-        </g>
+      <!-- Bobbing: the editor's rounded white arrow. It bobs in the edit, not live. -->
+      <svg class="skin" data-skin="bobbing" style="left: -2px; top: -2px" width="20" height="25" viewBox="-2 -2 20 25" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 0 L2.64 19.8 Q3.08 21.34 4.4 20.02 L8.36 14.74 L15.18 14.08 Q17.16 13.86 15.62 12.32 Z" fill="#ffffff" stroke="#171717" stroke-width="1.2" stroke-linejoin="round" />
       </svg>
 
       <!-- Centred skins: hot spot is the middle, so the viewBox min is negative on both axes. -->
@@ -141,20 +122,6 @@
         <path d="M0 -10 Q1.13 -1.13 10 0 Q1.13 1.13 0 10 Q-1.13 1.13 -10 0 Q-1.13 -1.13 0 -10 Z" fill="url(#star-body)" stroke="rgba(98,79,26,0.6)" stroke-width="0.8" stroke-linejoin="round" />
       </svg>
 
-      <svg class="skin" data-skin="ring" style="left: -15px; top: -15px" width="30" height="30" viewBox="-15 -15 30 30" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="ring-rim" x1="0" y1="0" x2="0.7" y2="1">
-            <stop offset="0" stop-color="#ffffff" />
-            <stop offset="0.55" stop-color="#e7e9ef" />
-            <stop offset="1" stop-color="#aeb4c2" />
-          </linearGradient>
-        </defs>
-        <circle cx="0" cy="0" r="9.6" fill="none" stroke="#14161c" stroke-width="4.6" opacity="0.55" />
-        <circle cx="0" cy="0" r="9.6" fill="none" stroke="url(#ring-rim)" stroke-width="2.5" />
-        <path d="M -6.8 -6.8 A 9.6 9.6 0 0 1 2 -9.2" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.9" />
-        <circle cx="0" cy="0" r="1.9" fill="#ffffff" stroke="#14161c" stroke-width="1.1" />
-      </svg>
-
       <!-- Shaded sphere: radial gradient off-centre plus a specular dot. -->
       <svg class="skin" data-skin="dot" style="left: -11px; top: -11px" width="22" height="22" viewBox="-11 -11 22 22" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -168,21 +135,6 @@
         <ellipse cx="-2.1" cy="-2.6" rx="2.2" ry="1.5" fill="#ffffff" opacity="0.85" transform="rotate(-32)" />
       </svg>
 
-      <svg class="skin" data-skin="crosshair" style="left: -17px; top: -17px" width="34" height="34" viewBox="-17 -17 34 34" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="cross-arm" x1="0" y1="0" x2="0.7" y2="1">
-            <stop offset="0" stop-color="#ffffff" />
-            <stop offset="1" stop-color="#c3c8d3" />
-          </linearGradient>
-        </defs>
-        <g stroke="#14161c" stroke-width="4.4" stroke-linecap="round" opacity="0.5">
-          <path d="M-13 0 H-4.5 M4.5 0 H13 M0 -13 V-4.5 M0 4.5 V13" />
-        </g>
-        <g stroke="url(#cross-arm)" stroke-width="2" stroke-linecap="round">
-          <path d="M-13 0 H-4.5 M4.5 0 H13 M0 -13 V-4.5 M0 4.5 V13" />
-        </g>
-        <circle cx="0" cy="0" r="1.5" fill="#ffffff" stroke="#14161c" stroke-width="0.9" />
-      </svg>
     </div>
     <script type="module">
       // Coordinates arrive two ways. Forwarded mouse moves are the fast path: they

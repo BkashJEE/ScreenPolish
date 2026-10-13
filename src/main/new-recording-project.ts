@@ -5,6 +5,7 @@
 // that were already made. Choices here only apply to new takes.
 
 import { DEFAULT_PROJECT, type Project } from '@shared/types'
+import { CURSOR_SKINS } from '@shared/ipc'
 import { DEFAULT_CLICK_SOUND } from '@shared/click-sound'
 import { DEFAULT_ZOOM_SOUND } from '@shared/zoom-sound'
 import type { PlanTakeLook } from '@shared/record-plan'
@@ -15,7 +16,8 @@ import type { PlanTakeLook } from '@shared/record-plan'
  */
 export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorSkin: string; look?: PlanTakeLook | null }): Project {
   const skin = args.cursorSkin
-  const style = skin === 'agent' || skin === 'halo' || skin === 'star' ? skin : skin === 'sprite' ? 'sprite' : skin === 'hand' ? 'hand' : skin === 'dot' || skin === 'ring' ? 'dot' : 'arrow'
+  // Capture and the editor list the same pointers, so the skin is the style.
+  const style = (CURSOR_SKINS as readonly string[]).includes(skin) ? (skin as Project['cursor']['style']) : 'arrow'
   const look = args.look
   const intro = look?.scenes.find((sc) => sc.kind === 'intro')
   return {

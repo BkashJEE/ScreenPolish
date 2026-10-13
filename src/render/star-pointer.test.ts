@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Ctx2D } from '../shared/ctx2d'
-import { STAR_BURST_SEC, STAR_POINTER_COLOR, STAR_TRAIL_MAX, drawCursor, drawStar, drawStarBurst, drawStarTrail } from './render-frame'
+import { STAR_BURST_SEC, STAR_POINTER_COLOR, STAR_TRAIL_MAX, pointerHasOwnClick, drawCursor, drawStar, drawStarBurst, drawStarTrail } from './render-frame'
 
 /** Records fills, strokes and gradient stops; enough of a 2D context for the Star. */
 function recorder() {
@@ -88,5 +88,13 @@ describe('Star burst', () => {
       drawStarBurst(ctx, 0, 0, 32, age, 0)
       expect(log).toEqual([])
     }
+  })
+})
+
+describe('pointerHasOwnClick', () => {
+  it('is true only for the pointers with their own click effect', () => {
+    expect(pointerHasOwnClick('halo')).toBe(true)
+    expect(pointerHasOwnClick('star')).toBe(true)
+    for (const style of ['agent', 'arrow', 'hand', 'bobbing', 'dot', 'sprite'] as const) expect(pointerHasOwnClick(style)).toBe(false)
   })
 })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROJECT } from '@shared/types'
 import { newRecordingProject } from './new-recording-project'
+import { CURSOR_SKINS } from '@shared/ipc'
 import { mergeProject } from './project-io'
 
 describe('new recording project', () => {
@@ -63,6 +64,9 @@ describe('the Agent pointer', () => {
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'agent' }).cursor.style).toBe('agent')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'halo' }).cursor.style).toBe('halo')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'star' }).cursor.style).toBe('star')
+    // Capture lists the editor's pointers, so every skin opens as the same style.
+    for (const skin of CURSOR_SKINS) expect(newRecordingProject({ title: '', fps: 30, cursorSkin: skin }).cursor.style).toBe(skin)
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'unknown' }).cursor.style).toBe('arrow')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'hand' }).cursor.style).toBe('hand')
   })
 })
