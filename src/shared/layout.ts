@@ -24,6 +24,14 @@ export function outputSize(project: Project, source: Size): Size {
     case '1:1':
       ratio = 1
       break
+    // The feed shape on Instagram and LinkedIn: taller than square, shorter than vertical.
+    case '4:5':
+      ratio = 4 / 5
+      break
+    // Slides and older screens.
+    case '4:3':
+      ratio = 4 / 3
+      break
     case 'source':
       ratio = source.width > 0 && source.height > 0 ? source.width / source.height : 16 / 9
       break

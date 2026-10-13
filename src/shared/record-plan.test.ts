@@ -40,7 +40,7 @@ describe('normalizePlan', () => {
       ...good,
       durationSec: 99999,
       shots: [...Array.from({ length: 30 }, (_, i) => ({ atSec: i, action: `step ${i}` })), { atSec: 'soon', action: 'x' }, { atSec: 5000, action: 'late' }],
-      look: { aspect: '4:3', fps: 24, pointer: 'laser', mic: 'yes', background: ['red', '#00ff00'] },
+      look: { aspect: '21:9', fps: 24, pointer: 'laser', mic: 'yes', background: ['red', '#00ff00'] },
       scenes: [{ kind: 'intro', title: 'One' }, { kind: 'intro', title: 'Two' }, { kind: 'outro', title: '' }]
     })!
     expect(plan.durationSec).toBe(PLAN_MAX_SEC)

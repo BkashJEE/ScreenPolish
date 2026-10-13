@@ -264,6 +264,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             { value: '16:9', label: '16:9', title: 'Landscape' },
             { value: '9:16', label: '9:16', title: 'Vertical' },
             { value: '1:1', label: '1:1', title: 'Square' },
+            { value: '4:5', label: '4:5', title: 'Feed post (Instagram, LinkedIn)' },
+            { value: '4:3', label: '4:3', title: 'Slides' },
             { value: 'source', label: 'Source', title: 'Match the recording' }
           ]}
         />

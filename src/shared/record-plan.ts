@@ -13,7 +13,7 @@
 import { normalizeScenes, type Scene } from './scenes'
 
 export type PlanSourceKind = 'screen' | 'window' | 'region'
-export type PlanAspect = '16:9' | '9:16' | '1:1'
+export type PlanAspect = '16:9' | '9:16' | '1:1' | '4:5' | '4:3'
 /** The record panel's pointer styles an agent may pick from. */
 export type PlanPointer = 'agent' | 'halo' | 'star' | 'arrow' | 'hand' | 'bobbing' | 'dot'
 
@@ -93,7 +93,7 @@ export function normalizePlan(raw: unknown): RecordPlan | null {
   const lookRaw = (r.look && typeof r.look === 'object' ? r.look : {}) as Record<string, unknown>
   const bg = Array.isArray(lookRaw.background) ? lookRaw.background.filter((c): c is string => typeof c === 'string' && HEX.test(c)) : []
   const look: RecordPlan['look'] = {}
-  const aspect = oneOf(lookRaw.aspect, ['16:9', '9:16', '1:1'] as const)
+  const aspect = oneOf(lookRaw.aspect, ['16:9', '9:16', '1:1', '4:5', '4:3'] as const)
   if (aspect) look.aspect = aspect
   const fps = oneOf(Number(lookRaw.fps), [30, 60] as const)
   if (fps) look.fps = fps
@@ -167,7 +167,7 @@ const SHAPE = `{
   "source": { "kind": "screen" | "window" | "region", "target": "a screen or window name from the list", "reason": "why this angle" },
   "durationSec": 45,
   "shots": [ { "atSec": 0, "action": "what to do on screen" } ],
-  "look": { "aspect": "16:9" | "9:16" | "1:1", "fps": 30 | 60, "pointer": "agent" | "halo" | "star" | "arrow" | "hand" | "bobbing" | "dot", "mic": true, "systemAudio": false, "background": ["#1f2a44", "#6a3d9a"] },
+  "look": { "aspect": "16:9" | "9:16" | "1:1" | "4:5" | "4:3", "fps": 30 | 60, "pointer": "agent" | "halo" | "star" | "arrow" | "hand" | "bobbing" | "dot", "mic": true, "systemAudio": false, "background": ["#1f2a44", "#6a3d9a"] },
   "scenes": [
     { "kind": "intro", "style": "calm" | "bold", "title": "…", "subtitle": "…", "steps": ["…"], "durationSec": 3 },
     { "kind": "outro", "style": "calm" | "bold", "title": "…", "subtitle": "…", "durationSec": 2.5 }
@@ -223,7 +223,7 @@ export function normalizeTakeLook(raw: unknown): PlanTakeLook | null {
   if (!raw || typeof raw !== 'object') return null
   const r = raw as Record<string, unknown>
   const bg = Array.isArray(r.background) ? r.background.filter((c): c is string => typeof c === 'string' && HEX.test(c)) : []
-  const aspect = oneOf(r.aspect, ['16:9', '9:16', '1:1'] as const)
+  const aspect = oneOf(r.aspect, ['16:9', '9:16', '1:1', '4:5', '4:3'] as const)
   return {
     scenes: normalizeScenes(r.scenes).slice(0, 2),
     ...(bg.length >= 2 ? { background: [bg[0]!, bg[1]!] as [string, string] } : {}),

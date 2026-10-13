@@ -16,6 +16,11 @@ describe('outputSize', () => {
     expect(outputSize(project({ aspect: '16:9', height: 2160 }), hd)).toEqual({ width: 3840, height: 2160 })
   })
 
+  it('makes the feed and slide shapes', () => {
+    expect(outputSize(project({ aspect: '4:5', height: 1080 }), hd)).toEqual({ width: 864, height: 1080 })
+    expect(outputSize(project({ aspect: '4:3', height: 1080 }), hd)).toEqual({ width: 1440, height: 1080 })
+  })
+
   it('derives the width from the aspect', () => {
     expect(outputSize(project({ aspect: '1:1', height: 1080 }), hd)).toEqual({ width: 1080, height: 1080 })
     expect(outputSize(project({ aspect: '9:16', height: 1920 as never }), hd)).toEqual({ width: 1080, height: 1920 })

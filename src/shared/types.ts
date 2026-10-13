@@ -65,7 +65,7 @@ export interface ZoomSegment {
   style?: CameraStyle
 }
 
-export type OutputAspect = '16:9' | '9:16' | '1:1' | 'source'
+export type OutputAspect = '16:9' | '9:16' | '1:1' | '4:5' | '4:3' | 'source'
 export type OutputHeight = 720 | 1080 | 1440 | 2160
 /** Pointer drawn into the video. Packs may add their own (see src/brand). */
 export type CursorStyle = 'arrow' | 'dot' | 'hand' | 'bobbing' | 'sprite' | 'agent' | 'halo' | 'star'
