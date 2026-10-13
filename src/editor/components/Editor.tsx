@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { syncEvents } from '../../shared/input-sync'
 import { canSplitAt, clipsFrom, keptDuration, removeClip, restoreClip, splitAt } from '../../shared/cuts'
 import { clipSpeed, setClipSpeed, speedSpans } from '../../shared/speed'
 import { RegionLanes } from './RegionLanes'
@@ -116,9 +117,11 @@ function TopBar({ name, onBack, status, right, onRename }: { name: string; onBac
 }
 
 function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () => void }) {
-  const { events, files, urls } = loaded
+  const { events: recordedEvents, files, urls } = loaded
   const folder = files.folder
   const { project, setProject, undo, redo, canUndo, canRedo, beginBatch, endBatch } = useProjectHistory(loaded.project)
+  // Click timing moves the whole input log against the picture; everything below uses the moved log.
+  const events = useMemo(() => syncEvents(recordedEvents, project.cursor.syncSec), [recordedEvents, project.cursor.syncSec])
   const [duration, setDuration] = useState<number>(NaN)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)

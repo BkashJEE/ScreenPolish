@@ -3,6 +3,7 @@ import type { LoadedProject } from '../../shared/ipc'
 import type { RecordingSummary } from '../../shared/types'
 import { resolveZoomSegments } from '../../shared/zoom-planner'
 import { pointerPathFor } from '../../shared/pointer'
+import { syncEvents } from '../../shared/input-sync'
 import { imageUrlForPath, normalizeProject, normalizeClickSound, normalizeZoomSound } from '../lib/project'
 import { loadImage, loadOverlayImages } from '../lib/media'
 import { previewSeekTime } from '../lib/hover-preview'
@@ -58,8 +59,9 @@ function ComposedPreview({ item, scrub }: { item: RecordingSummary; scrub: numbe
   }, [item.folder])
 
   const trim = useMemo(() => resolveTrim(loaded?.project.trim ?? { start: 0, end: 0 }, duration), [loaded, duration])
-  const segments = useMemo(() => loaded && duration > 0 ? resolveZoomSegments(loaded.project, loaded.events, duration) : [], [loaded, duration])
-  const pointer = useMemo(() => loaded ? pointerPathFor(loaded.events, loaded.project.cursor) : [], [loaded])
+  const events = useMemo(() => loaded ? syncEvents(loaded.events, loaded.project.cursor.syncSec) : null, [loaded])
+  const segments = useMemo(() => loaded && events && duration > 0 ? resolveZoomSegments(loaded.project, events, duration) : [], [loaded, events, duration])
+  const pointer = useMemo(() => loaded && events ? pointerPathFor(events, loaded.project.cursor) : [], [loaded, events])
   useEffect(() => {
     if (scrub === null) return
     const next = previewSeekTime(scrub, trim.end - trim.start)
@@ -68,7 +70,7 @@ function ComposedPreview({ item, scrub }: { item: RecordingSummary; scrub: numbe
 
   return <div className="h-[min(60vh,600px)] bg-black">
     {error ? <div className="p-6 text-sm text-fg-muted">Could not preview saved effects. Open the recording to inspect it.</div> : loaded ?
-      <Preview hideControls urls={loaded.urls} events={loaded.events} project={loaded.project}
+      <Preview hideControls urls={loaded.urls} events={events ?? loaded.events} project={loaded.project}
         segments={segments} pointerPath={pointer} backgroundImage={background} overlayImages={images}
         selectedOverlayId={null} duration={duration} time={time} playing={playing && duration > 0}
         trim={trim} onTime={setTime} onPlayingChange={setPlaying} onDuration={setDuration}

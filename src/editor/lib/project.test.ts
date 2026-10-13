@@ -31,6 +31,14 @@ describe('bundled background themes', () => {
   })
 })
 
+describe('click timing on load', () => {
+  it('keeps a saved click timing to the offered range and leaves it absent when unset', () => {
+    expect(normalizeProject({ cursor: { ...DEFAULT_PROJECT.cursor, syncSec: 9 } }).cursor.syncSec).toBe(1.5)
+    expect(normalizeProject({ cursor: { ...DEFAULT_PROJECT.cursor, syncSec: 0.8 } }).cursor.syncSec).toBe(0.8)
+    expect(normalizeProject({ cursor: { ...DEFAULT_PROJECT.cursor } }).cursor.syncSec).toBeUndefined()
+  })
+})
+
 describe('patchGroup', () => {
   it('returns a new project with the group patched and nothing else touched', () => {
     const next = patchGroup(DEFAULT_PROJECT, 'frame', { radius: 24 })

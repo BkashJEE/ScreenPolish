@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { syncEvents } from '../../shared/input-sync'
 import { exportDurationSec, sceneTimeline } from '../../shared/scenes'
 import type { ExportKind, LoadedProject } from '../../shared/ipc'
 import type { ExportQuality, OutputAspect, OutputHeight, Project } from '../../shared/types'
@@ -68,7 +69,7 @@ export function ExportSheet(props: ExportSheetProps) {
       const { path } = await exportProject({
         folder: loaded.files.folder,
         urls: loaded.urls,
-        events: loaded.events,
+        events: syncEvents(loaded.events, project.cursor.syncSec),
         project,
         kind,
         name: cleanName || defaultName,

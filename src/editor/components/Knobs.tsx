@@ -10,6 +10,7 @@ import { normalizeCuts } from '../../shared/cuts'
 import type { LoadedProject } from '../../shared/ipc'
 import type { AnimationStyle, CameraStyle, LetteringPosition, MockupKind, MockupTheme, OutputAspect, OutputHeight, Project, WebcamCorner, ZoomSegment } from '../../shared/types'
 import { DEFAULT_WEBCAM_LOOK, type WebcamLook } from '../../shared/webcam-look'
+import { SYNC_MAX_SEC, SYNC_MIN_SEC } from '../../shared/input-sync'
 import { ZOOM_TEMPLATES, applyZoomTemplate, matchZoomTemplate } from '../../shared/zoom-templates'
 import { baseName } from '../lib/media'
 import { PACK_PLATE_INK } from '../../brand'
@@ -648,6 +649,18 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         <SliderField label="Smoothing" value={project.cursor.smoothing} min={0} max={1} step={0.01} onChange={(smoothing) => set('cursor', { smoothing })} format={pct} />
         <SliderField label="Glide" value={project.cursor.glide ?? 0} min={0} max={1} step={0.01} onChange={(glide) => set('cursor', { glide })} format={pct} />
         <p className="text-[11px] leading-[1.4] text-fg-muted">Glide slows fast pointer moves into calm, even ones that still land on every click. Smoothing only removes jitter.</p>
+        <SliderField
+          label="Click timing"
+          value={project.cursor.syncSec ?? 0}
+          min={SYNC_MIN_SEC}
+          max={SYNC_MAX_SEC}
+          step={0.05}
+          onChange={(syncSec) => set('cursor', { syncSec })}
+          format={(v) => (v === 0 ? 'As recorded' : `${v > 0 ? '+' : ''}${v.toFixed(2)} s`)}
+        />
+        <p className="text-[11px] leading-[1.4] text-fg-muted">
+          If the screen reacts after the click, move this up until the click lands as the button changes. It moves the pointer, clicks and zooms together.
+        </p>
         {pointerHasOwnClick(project.cursor.style) ? (
           <p className="text-[11px] leading-[1.4] text-fg-muted">
             {project.cursor.style === 'halo' ? 'Halo tightens on each click' : 'Star throws sparkles on each click'}, so click ripples and bounce are off for it.

@@ -196,7 +196,7 @@ export interface Project {
   mockup: MockupSettings
   animation: AnimationSettings
   /** size is a multiplier on a 32px base; smoothing 0..1 */
-  cursor: { size: number; smoothing: number; /** 0..1, how much fast moves are slowed (see glidePointerPath); absent or 0 = off. */ glide?: number; /** Agent pointer fill, a hex colour; absent = the default violet. */ color?: string; /** 0..1, how far the recording dims away from the pointer; absent or 0 = off. */ spotlight?: number; ripple: boolean; style: CursorStyle; bounce?: boolean; sway?: number; motionBlur?: number; loop?: boolean; /** Fade the drawn pointer after this many idle seconds; absent or 0 keeps it always visible. */ idleHideSec?: number; clickSound?: ClickSoundSettings }
+  cursor: { size: number; smoothing: number; /** 0..1, how much fast moves are slowed (see glidePointerPath); absent or 0 = off. */ glide?: number; /** Agent pointer fill, a hex colour; absent = the default violet. */ color?: string; /** 0..1, how far the recording dims away from the pointer; absent or 0 = off. */ spotlight?: number; ripple: boolean; style: CursorStyle; bounce?: boolean; sway?: number; motionBlur?: number; loop?: boolean; /** Fade the drawn pointer after this many idle seconds; absent or 0 keeps it always visible. */ idleHideSec?: number; /** Seconds the input log is moved later against the picture (see syncEvents); absent or 0 = as recorded. */ syncSec?: number; clickSound?: ClickSoundSettings }
   /** motion: 'zoom' keeps every automatic segment a plain zoom; 'cinematic' alternates zooms, tilts and drifts. */
   zoom: {
     enabled: boolean
