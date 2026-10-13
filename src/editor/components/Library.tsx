@@ -99,6 +99,7 @@ export function Library({ onOpen, refreshKey }: { onOpen: (folder: string) => vo
   const preview = useHoverPreview()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [cardSize, setCardSize] = useState(loadLibraryCardSize)
 
   const load = useCallback(async () => {
@@ -163,6 +164,24 @@ export function Library({ onOpen, refreshKey }: { onOpen: (folder: string) => vo
               <span className="shrink-0 text-fg-dim">Change</span>
             </button>
           )}
+          <Button
+            size="sm"
+            disabled={importing}
+            title="Edit a video made elsewhere: OBS, a phone, another recorder"
+            onClick={() => {
+              setImporting(true)
+              void window.polish
+                .importVideo()
+                .then((folder) => {
+                  if (folder) onOpen(folder)
+                })
+                .catch((e: unknown) => window.alert(`Could not open the video: ${e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e)}`))
+                .finally(() => setImporting(false))
+            }}
+          >
+            {importing ? <Spinner size={12} /> : null}
+            {importing ? 'Opening…' : 'Open a video'}
+          </Button>
           <IconButton label="Open recordings folder" onClick={() => void window.polish.openRecordingsRoot()}>
             <Folder size={14} />
           </IconButton>

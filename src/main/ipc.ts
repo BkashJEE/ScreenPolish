@@ -21,6 +21,8 @@ import { copyFileToClipboard } from './clipboard-file'
 import { allowImage, mediaUrl } from './media-protocol'
 import { ensureShelf, listTracks } from './music-library'
 import { ensureBackgroundsFolder, listBackgrounds } from './background-library'
+import { IMPORT_EXTENSIONS, importVideo } from './import-video'
+import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
 import { mergeProject, serializeProject } from './project-io'
 import { saveRecordDefaults } from './record-defaults'
@@ -316,6 +318,20 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
 
   // Listing the folder does not create it: only opening it does, so the app
   // never leaves an empty folder in Pictures for someone who never asked.
+  ipcMain.handle(EDITOR.importVideo, async (event: IpcMainInvokeEvent) => {
+    const parent = BrowserWindow.fromWebContents(event.sender) ?? deps.getEditorWindow() ?? undefined
+    const result = await dialog.showOpenDialog(parent as BrowserWindow, {
+      title: 'Open a video',
+      properties: ['openFile'],
+      filters: [{ name: 'Videos', extensions: [...IMPORT_EXTENSIONS] }]
+    })
+    const picked = result.canceled ? null : (result.filePaths[0] ?? null)
+    if (!picked) return null
+    const folder = await importVideo(deps.ffmpegPath(), deps.root(), picked)
+    await writeThumbnail(deps.ffmpegPath(), folder).catch(() => null)
+    return folder
+  })
+
   ipcMain.handle(EDITOR.listBackgrounds, () => {
     const images = listBackgrounds(deps.backgroundsRoot())
     for (const image of images) allowImage(image.path)

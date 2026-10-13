@@ -160,6 +160,7 @@ export const EDITOR = {
   listMusic: 'polish:music:list',
   openMusicFolder: 'polish:music:open-folder',
   listBackgrounds: 'polish:backgrounds:list',
+  importVideo: 'polish:recordings:import-video',
   openBackgroundsFolder: 'polish:backgrounds:open-folder',
   saveImage: 'polish:image:save',
   setCover: 'polish:image:set-cover',
@@ -325,6 +326,8 @@ export interface EditorBridge {
   listMusic: () => Promise<MusicTrack[]>
   /** Open the shelf in the file manager, so tracks can be dropped in. */
   openMusicFolder: () => Promise<void>
+  /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
+  importVideo: () => Promise<string | null>
   /** Pictures in your backgrounds folder, ready to use as a background. */
   listBackgrounds: () => Promise<FolderBackground[]>
   /** Open the backgrounds folder in the file manager, creating it if needed. */
