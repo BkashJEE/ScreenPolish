@@ -98,6 +98,8 @@ export interface ExportEndRequest {
   /** For GIF: main converts the temp MP4 and deletes it. */
   fps?: number
   width?: number
+  /** For GIF: false plays once; absent or true loops forever. */
+  loop?: boolean
 }
 
 export interface ExportEndResponse {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { syncEvents } from '../../shared/input-sync'
 import { exportDurationSec, sceneTimeline } from '../../shared/scenes'
 import type { ExportKind, LoadedProject } from '../../shared/ipc'
-import type { ExportQuality, OutputAspect, OutputHeight, Project } from '../../shared/types'
+import type { ExportQuality, GifOptions, OutputAspect, OutputHeight, Project } from '../../shared/types'
 import { outputSize } from '../../shared/layout'
 import { speedSpans } from '../../shared/speed'
 import { estimateBytes, formatBytes, gifFps, gifWidth, pickBitrate } from '../lib/bitrate'
@@ -10,7 +10,7 @@ import { ExportCancelled, exportProject } from '../lib/export'
 import { patchGroup } from '../lib/project'
 import { formatTime } from '../lib/time'
 import { Check, Copy, Export, Folder, Play, Spinner, Warning } from './icons'
-import { Button, Modal, Row, Segmented, Select, TextInput, cx } from './ui'
+import { Button, Modal, Row, Segmented, Select, TextInput, Toggle, cx } from './ui'
 
 type Phase = { kind: 'idle' } | { kind: 'running'; fraction: number } | { kind: 'done'; path: string } | { kind: 'error'; message: string }
 
@@ -59,7 +59,10 @@ export function ExportSheet(props: ExportSheetProps) {
   const running = phase.kind === 'running'
   const cleanName = name.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
   const quality = project.output.quality ?? 'balanced'
-  const gw = gifWidth(size.width, quality)
+  const gif = project.output.gif ?? {}
+  const gfps = gifFps(quality, gif.fps)
+  const gw = gifWidth(size.width, quality, gif.width)
+  const setGif = (patch: Partial<GifOptions>) => onProject((p) => patchGroup(p, 'output', { gif: { ...(p.output.gif ?? {}), ...patch } }))
 
   const start = async () => {
     const controller = new AbortController()
@@ -98,7 +101,7 @@ export function ExportSheet(props: ExportSheetProps) {
           disabled={running}
           options={[
             { value: 'mp4', label: 'MP4', title: 'H264 + AAC' },
-            { value: 'gif', label: 'GIF', title: `${gifFps(quality)} fps, up to ${gw} px wide` }
+            { value: 'gif', label: 'GIF', title: `${gfps} fps, up to ${gw} px wide` }
           ]}
         />
         <Row label="Aspect">
@@ -135,7 +138,7 @@ export function ExportSheet(props: ExportSheetProps) {
         {kind === 'mp4' && <Row label="Frame rate">
           <Segmented<30 | 60> value={project.output.fps} disabled={running} onChange={(fps) => onProject((p) => patchGroup(p, 'output', { fps }))} options={[{ value: 30, label: '30 fps' }, { value: 60, label: '60 fps' }]} />
         </Row>}
-        <Row label="Quality" hint={kind === 'gif' ? `${gifFps(quality)} fps, ${gw} px wide` : `${(pickBitrate(size.height, quality, project.output.fps, size.width) / 1_000_000).toFixed(1)} Mbps`}>
+        <Row label="Quality" hint={kind === 'gif' ? `${gfps} fps, ${gw} px wide` : `${(pickBitrate(size.height, quality, project.output.fps, size.width) / 1_000_000).toFixed(1)} Mbps`}>
           <Segmented<ExportQuality>
             full={false}
             size="sm"
@@ -149,6 +152,33 @@ export function ExportSheet(props: ExportSheetProps) {
             ]}
           />
         </Row>
+        {kind === 'gif' && (
+          <>
+            <Row label="GIF frame rate" hint="Fewer frames, smaller file">
+              <Segmented<10 | 15 | 20 | 25>
+                full={false}
+                size="sm"
+                disabled={running}
+                value={(gif.fps ?? 0) as 10 | 15 | 20 | 25}
+                onChange={(fps) => setGif({ fps })}
+                options={[10, 15, 20, 25].map((v) => ({ value: v as 10 | 15 | 20 | 25, label: String(v) }))}
+              />
+            </Row>
+            <Row label="GIF width" hint={gif.width ? undefined : `Following Quality: ${gw} px`}>
+              <Segmented<480 | 640 | 960 | 1280>
+                full={false}
+                size="sm"
+                disabled={running}
+                value={(gif.width ?? 0) as 480 | 640 | 960 | 1280}
+                onChange={(width) => setGif({ width })}
+                options={[480, 640, 960, 1280].filter((v) => v === 480 || v <= size.width).map((v) => ({ value: v as 480 | 640 | 960 | 1280, label: String(v) }))}
+              />
+            </Row>
+            <Row label="Loop" hint={gif.loop === false ? 'Plays once and stops on the last frame' : 'Plays over and over'}>
+              <Toggle checked={gif.loop !== false} disabled={running} label="Loop" onChange={(loop) => setGif({ loop })} />
+            </Row>
+          </>
+        )}
         <Row label="File name">
           <div className="flex items-center gap-1.5">
             <TextInput value={name} onChange={(e) => setName(e.target.value)} disabled={running} className="w-[200px]" spellCheck={false} aria-label="File name" />
@@ -159,7 +189,7 @@ export function ExportSheet(props: ExportSheetProps) {
         <div className="grid grid-cols-3 gap-2 rounded-[8px] bg-bg-1 p-2.5 text-[11.5px]">
           <Stat label="Size" value={kind === 'gif' ? `${gw} x ${Math.round((size.height * gw) / size.width)}` : `${size.width} x ${size.height}`} />
           <Stat label="Length" value={formatTime(seconds, { fraction: false })} />
-          <Stat label="Estimate" value={`~${formatBytes(estimateBytes({ kind, width: size.width, height: size.height, seconds, quality, fps: project.output.fps }))}`} />
+          <Stat label="Estimate" value={`~${formatBytes(estimateBytes({ kind, width: size.width, height: size.height, seconds, quality, fps: project.output.fps, gif }))}`} />
         </div>
 
         {phase.kind === 'running' && (

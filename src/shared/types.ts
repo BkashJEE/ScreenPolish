@@ -65,6 +65,14 @@ export interface ZoomSegment {
   style?: CameraStyle
 }
 
+/** What a GIF export can be asked for beyond the quality preset. */
+export interface GifOptions {
+  fps?: 10 | 15 | 20 | 25
+  width?: 480 | 640 | 960 | 1280
+  /** Play once and stop on the last frame when false; loops forever otherwise. */
+  loop?: boolean
+}
+
 export type OutputAspect = '16:9' | '9:16' | '1:1' | '4:5' | '4:3' | 'source'
 export type OutputHeight = 720 | 1080 | 1440 | 2160
 /** Pointer drawn into the video. Packs may add their own (see src/brand). */
@@ -188,7 +196,7 @@ export interface Project {
   audioRegions?: { id: string; path: string; start: number; end: number; offset: number; volume: number }[]
   /** Non-destructive source-space crop, normalized to the captured recording. */
   crop: Crop
-  output: { aspect: OutputAspect; height: OutputHeight; fps: 30 | 60; quality: ExportQuality }
+  output: { aspect: OutputAspect; height: OutputHeight; fps: 30 | 60; quality: ExportQuality; /** GIF choices; each absent one follows `quality`. */ gif?: GifOptions }
   background: { kind: 'gradient' | 'solid' | 'image'; colors: string[]; angle: number; imagePath?: string; blur?: number; /** Draw the theme's brand lettering; absent on projects saved before themes existed. */ lettering?: boolean; /** Where the lettering sits; absent means top left. */ letteringPosition?: LetteringPosition }
   /** padding as a fraction (0..0.3) of the shorter output side; size is a bounded card multiplier; radius in output px; shadow 0..1 */
   /** Whole-card translation as output fractions. Kept separate from camera focus. */

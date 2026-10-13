@@ -181,7 +181,7 @@ export function createExportSink(deps: ExportSinkDeps): ExportSink {
           await fs.promises.rename(mixed, job.writePath)
         }
         if (job.kind === 'gif') {
-          await runFfmpeg(deps.ffmpegPath(), ffmpegGifArgs(job.writePath, job.finalPath, request.fps, request.width))
+          await runFfmpeg(deps.ffmpegPath(), ffmpegGifArgs(job.writePath, job.finalPath, request.fps, request.width, request.loop))
           await fs.promises.rm(job.writePath, { force: true })
         } else {
           // Only now does the finished file take the name the library shows.
