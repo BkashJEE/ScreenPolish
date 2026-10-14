@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GIF_FPS, GIF_MAX_WIDTH, estimateBytes, formatBytes, gifWidth, pickBitrate } from './bitrate'
+import { GIF_FPS, GIF_MAX_WIDTH, estimateBytes, formatBytes, gifFps, gifWidth, pickBitrate } from './bitrate'
 
 describe('pickBitrate', () => {
   it('budgets for frame rate and actual output width', () => {
@@ -63,5 +63,20 @@ describe('formatBytes', () => {
     expect(formatBytes(1536)).toBe('1.5 KB')
     expect(formatBytes(15 * 1024 * 1024)).toBe('15 MB')
     expect(formatBytes(3.2 * 1024 ** 3)).toBe('3.2 GB')
+  })
+})
+
+describe('chosen GIF settings', () => {
+  it('uses the chosen frame rate and width, and never makes the GIF wider than the video', () => {
+    expect(gifFps('small', 25)).toBe(25)
+    expect(gifFps('high')).toBe(20)
+    expect(gifWidth(1920, 'small', 1280)).toBe(1280)
+    expect(gifWidth(800, 'high', 1280)).toBe(800)
+    expect(gifWidth(1920, 'balanced')).toBe(GIF_MAX_WIDTH)
+  })
+
+  it('estimates a larger file for more frames and pixels', () => {
+    const base = { kind: 'gif' as const, width: 1920, height: 1080, seconds: 10, quality: 'balanced' as const }
+    expect(estimateBytes({ ...base, gif: { fps: 25, width: 1280 } })).toBeGreaterThan(estimateBytes({ ...base, gif: { fps: 10, width: 480 } }))
   })
 })

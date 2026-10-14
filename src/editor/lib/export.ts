@@ -239,7 +239,7 @@ export async function exportProject(args: ExportArgs): Promise<{ path: string }>
     const scenes = sceneTimeline(project.scenes ?? [], span)
 
     const quality = project.output.quality ?? 'balanced'
-    const fps = args.kind === 'gif' ? gifFps(quality) : project.output.fps
+    const fps = args.kind === 'gif' ? gifFps(quality, project.output.gif?.fps) : project.output.fps
     const videoSize = { width: events.region.width, height: events.region.height }
     const size = outputSize(project, videoSize)
     const segments = resolveZoomSegments(project, events, duration)
@@ -431,8 +431,9 @@ export async function exportProject(args: ExportArgs): Promise<{ path: string }>
       audioTrackCount,
       durationSec: frameCount / fps,
       audioSpeedSpans: project.preserveAudioPitch !== false ? spansWithScenes(timeline.map(span => ({start:span.outputStart,end:span.outputEnd,rate:span.rate})), scenes) : undefined,
-      fps: args.kind === 'gif' ? gifFps(quality) : undefined,
-      width: args.kind === 'gif' ? gifWidth(size.width, quality) : undefined
+      fps: args.kind === 'gif' ? gifFps(quality, project.output.gif?.fps) : undefined,
+      width: args.kind === 'gif' ? gifWidth(size.width, quality, project.output.gif?.width) : undefined,
+      loop: args.kind === 'gif' ? project.output.gif?.loop !== false : undefined
     })
     report(1)
     return { path: done.path }

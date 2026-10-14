@@ -24,6 +24,14 @@ export function outputSize(project: Project, source: Size): Size {
     case '1:1':
       ratio = 1
       break
+    // The feed shape on Instagram and LinkedIn: taller than square, shorter than vertical.
+    case '4:5':
+      ratio = 4 / 5
+      break
+    // Slides and older screens.
+    case '4:3':
+      ratio = 4 / 3
+      break
     case 'source':
       ratio = source.width > 0 && source.height > 0 ? source.width / source.height : 16 / 9
       break
@@ -55,18 +63,27 @@ export function contentRect(output: Size, source: Size, padding: number): Rect {
 /** Fraction of the shorter output side between the bubble and the frame edge. */
 export const WEBCAM_INSET = 0.03
 
+/** The most the webcam's margin may be, as a share of the shorter side. */
+export const WEBCAM_MAX_MARGIN = 0.15
+
 /**
- * Square webcam bubble with side = `webcam.size * min(output side)`, inset 3%
- * of the shorter side from the chosen corner. Ignores `webcam.enabled`.
+ * Square webcam bubble with side = `webcam.size * min(output side)`, inset
+ * `webcam.margin` (3% by default) of the shorter side from the chosen corner,
+ * or placed by `webcam.place` within the same inset. Ignores `webcam.enabled`.
  */
 export function webcamRect(output: Size, webcam: Project['webcam']): Rect {
   const minSide = Math.min(output.width, output.height)
   const side = clamp(webcam.size, 0, 1) * minSide
-  const inset = WEBCAM_INSET * minSide
+  const margin = Number.isFinite(webcam.margin) ? clamp(webcam.margin as number, 0, WEBCAM_MAX_MARGIN) : WEBCAM_INSET
+  const inset = margin * minSide
   const left = inset
   const right = output.width - inset - side
   const top = inset
   const bottom = output.height - inset - side
+  const place = webcam.place
+  if (place && Number.isFinite(place.x) && Number.isFinite(place.y)) {
+    return { x: left + clamp(place.x, 0, 1) * Math.max(0, right - left), y: top + clamp(place.y, 0, 1) * Math.max(0, bottom - top), width: side, height: side }
+  }
   switch (webcam.corner) {
     case 'tl':
       return { x: left, y: top, width: side, height: side }

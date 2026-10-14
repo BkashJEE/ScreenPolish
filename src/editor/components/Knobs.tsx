@@ -10,6 +10,7 @@ import { normalizeCuts } from '../../shared/cuts'
 import type { LoadedProject } from '../../shared/ipc'
 import type { AnimationStyle, CameraStyle, LetteringPosition, MockupKind, MockupTheme, OutputAspect, OutputHeight, Project, WebcamCorner, ZoomSegment } from '../../shared/types'
 import { DEFAULT_WEBCAM_LOOK, type WebcamLook } from '../../shared/webcam-look'
+import { WEBCAM_INSET, WEBCAM_MAX_MARGIN } from '../../shared/layout'
 import { SYNC_MAX_SEC, SYNC_MIN_SEC } from '../../shared/input-sync'
 import { ZOOM_TEMPLATES, applyZoomTemplate, matchZoomTemplate } from '../../shared/zoom-templates'
 import { baseName } from '../lib/media'
@@ -232,6 +233,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
   // and always write the whole object back rather than a partial.
   const look = { ...DEFAULT_WEBCAM_LOOK, ...(project.webcam.look ?? {}) }
   const setLook = (patch: Partial<WebcamLook>) => set('webcam', { look: { ...look, ...patch } })
+  // The hand placement, or where the chosen corner puts it, so the sliders start where the bubble is.
+  const webcamPlace = project.webcam.place ?? { x: project.webcam.corner === 'tl' || project.webcam.corner === 'bl' ? 0 : 1, y: project.webcam.corner === 'tl' || project.webcam.corner === 'tr' ? 0 : 1 }
 
   const bg = project.background
   // A bundled theme background carries its name as lettering; say which, so it can be switched on or off.
@@ -264,6 +267,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             { value: '16:9', label: '16:9', title: 'Landscape' },
             { value: '9:16', label: '9:16', title: 'Vertical' },
             { value: '1:1', label: '1:1', title: 'Square' },
+            { value: '4:5', label: '4:5', title: 'Feed post (Instagram, LinkedIn)' },
+            { value: '4:3', label: '4:3', title: 'Slides' },
             { value: 'source', label: 'Source', title: 'Match the recording' }
           ]}
         />
@@ -842,12 +847,12 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           <div className="text-[11.5px] text-fg-dim">No webcam was recorded with this clip.</div>
         ) : (
           <div className={cx('flex flex-col gap-2.5', !project.webcam.enabled && 'opacity-45 pointer-events-none')}>
-            <Row label="Corner">
+            <Row label="Corner" hint={project.webcam.place ? 'Placed by hand; pick a corner to snap back' : undefined}>
               <Segmented<WebcamCorner>
                 full={false}
                 size="sm"
-                value={project.webcam.corner}
-                onChange={(corner) => set('webcam', { corner })}
+                value={project.webcam.place ? ('' as WebcamCorner) : project.webcam.corner}
+                onChange={(corner) => set('webcam', { corner, place: undefined })}
                 options={[
                   { value: 'tl', label: 'TL', title: 'Top left' },
                   { value: 'tr', label: 'TR', title: 'Top right' },
@@ -857,6 +862,12 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
               />
             </Row>
             <SliderField label="Size" value={project.webcam.size} min={0.1} max={0.45} step={0.01} onChange={(size) => set('webcam', { size })} format={pct} />
+            {/* Starting from the corner it is in, so the first nudge does not jump it across the frame. */}
+            <SliderField label="Across" value={webcamPlace.x} min={0} max={1} step={0.01} onChange={(x) => set('webcam', { place: { ...webcamPlace, x } })} format={pct} />
+            <SliderField label="Down" value={webcamPlace.y} min={0} max={1} step={0.01} onChange={(y) => set('webcam', { place: { ...webcamPlace, y } })} format={pct} />
+            <SliderField label="Margin" value={project.webcam.margin ?? WEBCAM_INSET} min={0} max={WEBCAM_MAX_MARGIN} step={0.005} onChange={(margin) => set('webcam', { margin })} format={pct} />
+            <SliderField label="Shadow" value={project.webcam.shadow ?? 1} min={0} max={1} step={0.05} onChange={(shadow) => set('webcam', { shadow })} format={(v) => (v === 0 ? 'Off' : pct(v))} />
+            <Row label="Mirror"><Toggle checked={project.webcam.mirror ?? false} onChange={(mirror) => set('webcam', { mirror })} label="Mirror webcam" /></Row>
             <Row label="React to zoom"><Toggle checked={project.webcam.reactive ?? false} onChange={(reactive) => set('webcam', { reactive })} label="React to zoom" /></Row>
             <Row label="Round">
               <Toggle checked={project.webcam.round} onChange={(round) => set('webcam', { round })} label="Round webcam" />

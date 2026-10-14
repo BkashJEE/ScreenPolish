@@ -1,6 +1,6 @@
 // Encoder settings derived from the output size. Pure, tested.
 
-import type { ExportQuality } from '../../shared/types'
+import type { ExportQuality, GifOptions } from '../../shared/types'
 
 const BY_HEIGHT: Record<number, number> = {
   720: 5_000_000,
@@ -26,7 +26,9 @@ export function pickBitrate(height: number, quality: ExportQuality = 'balanced',
 export const QUALITY_FACTOR: Record<ExportQuality, number> = { small: 0.5, balanced: 1, high: 1.6 }
 
 /** GIF frame rate per quality; GIFs are dominated by frame count. */
-export function gifFps(quality: ExportQuality = 'balanced'): number {
+/** Frame rate of a GIF: the one asked for, or the quality preset's. */
+export function gifFps(quality: ExportQuality = 'balanced', chosen?: number): number {
+  if (chosen && Number.isFinite(chosen)) return Math.min(50, Math.max(1, Math.round(chosen)))
   return quality === 'small' ? 12 : quality === 'high' ? 20 : GIF_FPS
 }
 
@@ -34,20 +36,21 @@ export function gifFps(quality: ExportQuality = 'balanced'): number {
 export const GIF_FPS = 15
 export const GIF_MAX_WIDTH = 960
 
-export function gifWidth(outputWidth: number, quality: ExportQuality = 'balanced'): number {
-  const cap = quality === 'small' ? 720 : quality === 'high' ? 1280 : GIF_MAX_WIDTH
-  return Math.max(1, Math.min(Math.round(outputWidth), cap))
+/** Width of a GIF: the one asked for, or the quality preset's cap; never wider than the video. */
+export function gifWidth(outputWidth: number, quality: ExportQuality = 'balanced', chosen?: number): number {
+  const cap = chosen && Number.isFinite(chosen) ? chosen : quality === 'small' ? 720 : quality === 'high' ? 1280 : GIF_MAX_WIDTH
+  return Math.max(1, Math.min(Math.round(outputWidth), Math.round(cap)))
 }
 
 /** Rough file-size estimate for the export sheet, in bytes. */
-export function estimateBytes(args: { kind: 'mp4' | 'gif'; height: number; width: number; seconds: number; quality?: ExportQuality; fps?: number }): number {
+export function estimateBytes(args: { kind: 'mp4' | 'gif'; height: number; width: number; seconds: number; quality?: ExportQuality; fps?: number; gif?: GifOptions }): number {
   if (!(args.seconds > 0)) return 0
   const q = args.quality ?? 'balanced'
   if (args.kind === 'mp4') return (pickBitrate(args.height, q, args.fps, args.width) / 8) * args.seconds + (160_000 / 8) * args.seconds
   // GIF: ~0.5 byte per pixel per frame after palette + LZW is a fair average for UI captures.
-  const w = gifWidth(args.width, q)
+  const w = gifWidth(args.width, q, args.gif?.width)
   const h = args.width > 0 ? Math.round((args.height * w) / args.width) : args.height
-  return w * h * 0.5 * gifFps(q) * args.seconds
+  return w * h * 0.5 * gifFps(q, args.gif?.fps) * args.seconds
 }
 
 export function formatBytes(bytes: number): string {

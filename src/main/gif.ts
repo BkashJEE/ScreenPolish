@@ -18,6 +18,7 @@ export function gifFilter(fps = DEFAULT_GIF_FPS, width = DEFAULT_GIF_WIDTH): str
   )
 }
 
-export function ffmpegGifArgs(inputMp4: string, outputGif: string, fps?: number, width?: number): string[] {
-  return ['-y', '-hide_banner', '-loglevel', 'error', '-i', inputMp4, '-vf', gifFilter(fps, width), '-loop', '0', outputGif]
+/** `loop: false` plays once and holds the last frame (ffmpeg's -loop -1); anything else loops forever. */
+export function ffmpegGifArgs(inputMp4: string, outputGif: string, fps?: number, width?: number, loop?: boolean): string[] {
+  return ['-y', '-hide_banner', '-loglevel', 'error', '-i', inputMp4, '-vf', gifFilter(fps, width), '-loop', loop === false ? '-1' : '0', outputGif]
 }

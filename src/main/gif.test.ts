@@ -25,3 +25,12 @@ describe('ffmpegGifArgs', () => {
     expect(args[args.indexOf('-vf') + 1]).toBe(gifFilter(15, 800))
   })
 })
+
+describe('GIF looping', () => {
+  it('loops forever unless asked to play once', () => {
+    const loopValue = (args: string[]) => args[args.indexOf('-loop') + 1]
+    expect(loopValue(ffmpegGifArgs('in.mp4', 'out.gif'))).toBe('0')
+    expect(loopValue(ffmpegGifArgs('in.mp4', 'out.gif', 15, 960, true))).toBe('0')
+    expect(loopValue(ffmpegGifArgs('in.mp4', 'out.gif', 15, 960, false))).toBe('-1')
+  })
+})
