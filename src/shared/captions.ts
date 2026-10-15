@@ -163,6 +163,19 @@ export function cueWords(cue: CaptionCue): CaptionWord[] {
   })
 }
 
+/**
+ * `cue` without the words that were cut out of the video: a word that lies
+ * wholly inside a cut (a removed "um", a removed clip) is left out of its
+ * text and words. Lines without the transcriber's word times are returned as
+ * they are, since an estimated time could drop a word that was kept.
+ */
+export function withoutCutWords(cue: CaptionCue, cuts: ReadonlyArray<{ start: number; end: number }> | undefined): CaptionCue {
+  if (!cue.words || !cuts?.length) return cue
+  const kept = cue.words.filter((w) => !cuts.some((c) => w.start >= c.start - 1e-6 && w.end <= c.end + 1e-6))
+  if (kept.length === cue.words.length) return cue
+  return { ...cue, words: kept, text: kept.map((w) => w.text).join(' ') }
+}
+
 /** Index of the word being said at `t`: the last one started, or -1 before the first. */
 export function wordIndexAt(words: readonly CaptionWord[], t: number): number {
   let index = -1

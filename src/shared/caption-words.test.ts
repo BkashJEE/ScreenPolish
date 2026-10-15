@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cueWords, cuesFromWhisperJson, cuesToSrt, editCue, normalizeCaptions, srtTime, wordIndexAt, wordsFromTokens, type CaptionCue } from './captions'
+import { cueWords, cuesFromWhisperJson, cuesToSrt, editCue, normalizeCaptions, srtTime, withoutCutWords, wordIndexAt, wordsFromTokens, type CaptionCue } from './captions'
 import { outputTimeAt, speedSpans } from './speed'
 
 // The shape whisper-cli -ojf writes: special tokens, a space starting each word, pieces and punctuation joining it.
@@ -94,5 +94,17 @@ describe('.srt', () => {
     const spans = speedSpans(0, 20, [{ id: 'f', start: 8, end: 10, rate: 2 }], [{ id: 'c', start: 4, end: 8 }])
     const srt = cuesToSrt(cues, (t) => 3 + outputTimeAt(t, spans))
     expect(srt).toBe('1\n00:00:04,000 --> 00:00:05,000\nBefore the speed-up\n\n2\n00:00:10,000 --> 00:00:12,000\nAfter both\n')
+  })
+})
+
+describe('withoutCutWords', () => {
+  const cue: CaptionCue = { id: 'a', start: 0, end: 2, text: 'So um yes', words: [{ text: 'So', start: 0, end: 0.4 }, { text: 'um', start: 0.5, end: 0.8 }, { text: 'yes', start: 0.9, end: 1.3 }] }
+
+  it('leaves out words wholly inside a cut, and nothing else', () => {
+    expect(withoutCutWords(cue, [{ start: 0.47, end: 0.83 }]).text).toBe('So yes')
+    expect(withoutCutWords(cue, [{ start: 0.6, end: 0.83 }]).text).toBe('So um yes')
+    expect(withoutCutWords(cue, [])).toBe(cue)
+    const { words: _w, ...estimated } = cue
+    expect(withoutCutWords(estimated, [{ start: 0.47, end: 0.83 }]).text).toBe('So um yes')
   })
 })

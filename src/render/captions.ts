@@ -1,7 +1,7 @@
 // Burns the current caption into the frame. Screen space, on top of
 // everything, outside the camera: captions do not zoom with the content.
 
-import { DEFAULT_CAPTION_HIGHLIGHT, captionAt, cueWords, wordIndexAt, wrapCaption, type CaptionSettings, type CaptionWord } from '../shared/captions'
+import { DEFAULT_CAPTION_HIGHLIGHT, captionAt, cueWords, withoutCutWords, wordIndexAt, wrapCaption, type CaptionSettings, type CaptionWord } from '../shared/captions'
 import type { Ctx2D } from './render-frame'
 
 /** Base text height as a fraction of the shorter output side, at size 1. */
@@ -87,10 +87,13 @@ function roundedBox(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: n
   ctx.closePath()
 }
 
-export function drawCaptions(ctx: Ctx2D, output: { width: number; height: number }, captions: CaptionSettings | undefined, tSec: number): void {
+export function drawCaptions(ctx: Ctx2D, output: { width: number; height: number }, captions: CaptionSettings | undefined, tSec: number, cuts?: ReadonlyArray<{ start: number; end: number }>): void {
   if (!captions?.enabled || captions.cues.length === 0) return
-  const cue = captionAt(tSec, captions.cues)
-  if (!cue) return
+  const shownCue = captionAt(tSec, captions.cues)
+  if (!shownCue) return
+  // Words cut from the video (a removed "um") are not shown either.
+  const cue = withoutCutWords(shownCue, cuts)
+  if (!cue.text.trim()) return
   const style = captions.style ?? 'box'
   const highlight = captions.highlight ?? DEFAULT_CAPTION_HIGHLIGHT
   const minSide = Math.min(output.width, output.height)

@@ -1,4 +1,4 @@
-import { cuesToSrt, normalizeCaptions } from '../../shared/captions'
+import { cuesToSrt, normalizeCaptions, withoutCutWords } from '../../shared/captions'
 import { effectiveTrim } from '../../shared/layout'
 import { sceneTimeline } from '../../shared/scenes'
 import { outputTimeAt, speedSpans } from '../../shared/speed'
@@ -13,5 +13,6 @@ export function projectSrt(project: Project, durationSec: number): string {
   const spans = speedSpans(trim.start, trim.end, project.speedRegions, project.cuts)
   const recordingSec = spans.at(-1)?.outputEnd ?? 0
   const introSec = sceneTimeline(project.scenes ?? [], recordingSec).introSec
-  return cuesToSrt(normalizeCaptions(project.captions).cues, (t) => introSec + outputTimeAt(t, spans))
+  const cues = normalizeCaptions(project.captions).cues.map((c) => withoutCutWords(c, project.cuts))
+  return cuesToSrt(cues, (t) => introSec + outputTimeAt(t, spans))
 }
