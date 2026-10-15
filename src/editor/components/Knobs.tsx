@@ -806,6 +806,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           <SliderField label="Default scale" value={project.zoom.scale} min={1.2} max={4} step={0.1} onChange={(scale) => set('zoom', { scale })} format={(v) => `${v.toFixed(1)}x`} />
           <SliderField label="Ease" value={project.zoom.easeSec ?? 0.6} min={0.15} max={1.2} step={0.05} onChange={(easeSec) => set('zoom', { easeSec })} format={(v) => `${v.toFixed(2)} s`} />
           <SliderField label="Follow cursor" value={project.zoom.follow ?? 0.35} min={0} max={1} step={0.05} onChange={(follow) => set('zoom', { follow })} format={pct} />
+          <SliderField label="Motion blur" value={project.zoom.motionBlur ?? 0} min={0} max={1} step={0.05} onChange={(motionBlur) => set('zoom', { motionBlur })} format={pct} />
           <Row label="Zoom sounds" hint="A soft whoosh as the camera zooms in, out and pans">
             <Toggle
               checked={zoomSound.enabled}

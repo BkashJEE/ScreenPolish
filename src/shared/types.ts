@@ -223,6 +223,8 @@ export interface Project {
     removedAuto: string[]
     /** Soft whoosh under each zoom in, zoom out and pan. */
     sound?: ZoomSoundSettings
+    /** 0..1, how much camera pans and zooms smear across the shutter (see screenBlurMappings); absent or 0 = off. */
+    motionBlur?: number
   }
   webcam: {
     enabled: boolean

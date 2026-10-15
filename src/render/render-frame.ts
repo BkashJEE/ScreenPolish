@@ -76,6 +76,57 @@ export interface SourceCropRect {
 }
 
 /** Convert normalized ORIGINAL-source crop coordinates to source pixels. */
+/** Reference frame interval for screen motion blur: the shutter is a fraction of one 60 fps frame, so the
+ *  smear looks the same whatever the export frame rate. */
+export const SCREEN_BLUR_FRAME_SEC = 1 / 60
+/** Most copies of the screen drawn for one blurred frame; each copy is a full-size video draw. Six showed visible
+ *  ghost steps on a fast zoom; ten reads as one smooth smear and still costs less than the first cut's twelve. */
+export const SCREEN_BLUR_MAX_TAPS = 10
+/** Smears shorter than this many output px are invisible; drawing them only slows export (the zoom's follow
+ *  drift alone produced ~140 such frames in a 15 s take). */
+export const SCREEN_BLUR_MIN_SPAN_PX = 3
+
+function lerpMapping(a: VideoMapping, b: VideoMapping, u: number): VideoMapping {
+  return { scale: a.scale + (b.scale - a.scale) * u, tx: a.tx + (b.tx - a.tx) * u, ty: a.ty + (b.ty - a.ty) * u }
+}
+
+/**
+ * The camera positions to average for screen motion blur at one instant.
+ *
+ * `prev` and `next` are the camera one reference frame before and after `cur`. The shutter spans
+ * `amount` of that frame, centred on `cur`, and the camera is sampled evenly across it: a pan smears
+ * along its direction and a zoom smears outward from its centre, because scale and offset move
+ * together. The number of samples follows how far the picture actually moves (about one per
+ * 1.5 output px, capped), and a smear too short to see returns just `cur`, so still frames and
+ * slow drift cost nothing extra.
+ */
+export function screenBlurMappings(
+  prev: VideoMapping,
+  cur: VideoMapping,
+  next: VideoMapping,
+  source: { width: number; height: number },
+  amount: number,
+  maxTaps = SCREEN_BLUR_MAX_TAPS
+): VideoMapping[] {
+  const strength = Math.min(1, Math.max(0, Number.isFinite(amount) ? amount : 0))
+  if (strength <= 0) return [cur]
+  // How far any corner of the picture travels across the shutter, in output px.
+  const travel = (a: VideoMapping, b: VideoMapping) => Math.max(
+    Math.abs(b.tx - a.tx), Math.abs(b.ty - a.ty),
+    Math.abs(b.tx + b.scale * source.width - (a.tx + a.scale * source.width)),
+    Math.abs(b.ty + b.scale * source.height - (a.ty + a.scale * source.height))
+  )
+  const span = (travel(prev, cur) + travel(cur, next)) * 0.5 * strength
+  if (!(span >= SCREEN_BLUR_MIN_SPAN_PX)) return [cur]
+  const taps = Math.min(Math.max(2, Math.floor(maxTaps)), Math.max(2, Math.ceil(span / 1.5)))
+  const out: VideoMapping[] = []
+  for (let i = 0; i < taps; i++) {
+    const s = (i / (taps - 1) - 0.5) * strength // -strength/2 .. +strength/2 of a frame
+    out.push(s < 0 ? lerpMapping(cur, prev, -s) : lerpMapping(cur, next, s))
+  }
+  return out
+}
+
 export function cropToSourceRect(crop: Crop | unknown, source: { width: number; height: number }): SourceCropRect {
   const c = normalizeCrop(crop)
   return { x: c.x * source.width, y: c.y * source.height, width: c.width * source.width, height: c.height * source.height }
@@ -1051,17 +1102,37 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
   card.clip()
   card.imageSmoothingEnabled = true
   card.imageSmoothingQuality = 'high'
-  card.drawImage(
+  const drawScreenAt = (m: VideoMapping) => card.drawImage(
     input.video,
     geometry.crop.x,
     geometry.crop.y,
     geometry.crop.width,
     geometry.crop.height,
-    mapping.tx,
-    mapping.ty,
-    mapping.scale * geometry.crop.width,
-    mapping.scale * geometry.crop.height
+    m.tx,
+    m.ty,
+    m.scale * geometry.crop.width,
+    m.scale * geometry.crop.height
   )
+  // Screen motion blur: the camera one frame either side, and the picture averaged across the shutter.
+  // Copy i is drawn at alpha 1/(i+1), which leaves every copy weighted equally.
+  const blurAmount = project.zoom.motionBlur ?? 0
+  const shots = blurAmount > 0
+    ? screenBlurMappings(
+        frameGeometry({ ...input, tSec: input.tSec - SCREEN_BLUR_FRAME_SEC }, output).mapping,
+        mapping,
+        frameGeometry({ ...input, tSec: input.tSec + SCREEN_BLUR_FRAME_SEC }, output).mapping,
+        { width: geometry.crop.width, height: geometry.crop.height },
+        blurAmount
+      )
+    : [mapping]
+  if (shots.length === 1) drawScreenAt(shots[0])
+  else {
+    const alpha = card.globalAlpha
+    // Copies after the first are averaged into a blur, so the costly 'high' resampling buys nothing there.
+    shots.forEach((m, i) => { card.globalAlpha = alpha / (i + 1); if (i === 1) card.imageSmoothingQuality = 'medium'; drawScreenAt(m) })
+    card.globalAlpha = alpha
+    card.imageSmoothingQuality = 'high'
+  }
 
   // 6. Ripples go under the cursor so the pointer stays readable.
   if (project.cursor.ripple && !pointerHasOwnClick(project.cursor.style)) {
