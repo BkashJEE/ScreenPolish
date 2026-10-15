@@ -23,7 +23,7 @@ import {
 } from '@shared/ipc'
 import type { CaptureRegion, RecordingEvents } from '@shared/types'
 import { hideSystemCursor, restoreSystemCursor, isCursorHidden } from './win/cursor-manager'
-import { getCursorMode, getCursorSkin } from './settings'
+import { getCursorMode, getCursorSkin, getDefaultLook } from './settings'
 import { InputLogger } from './input-logger'
 import { TIMED_OUT, withTimeout, withTimeoutOrThrow } from './with-timeout'
 import { recordingsRoot } from './media-protocol'
@@ -731,7 +731,7 @@ export class RecordingSession {
         fs.writeFileSync(path.join(rec.folder, 'events.json'), JSON.stringify(events))
         const projectPath = path.join(rec.folder, 'project.json')
         if (!fs.existsSync(projectPath)) {
-          fs.writeFileSync(projectPath, serializeProject(newRecordingProject({ title: rec.title ?? '', fps: rec.startMessage.fps, cursorSkin: getCursorSkin(), look: this.nextTakeLook })))
+          fs.writeFileSync(projectPath, serializeProject(newRecordingProject({ title: rec.title ?? '', fps: rec.startMessage.fps, cursorSkin: getCursorSkin(), look: this.nextTakeLook, style: getDefaultLook() })))
           // A plan applies to the take it was made for, and only once.
           this.nextTakeLook = null
         }

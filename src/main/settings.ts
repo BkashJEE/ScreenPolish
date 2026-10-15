@@ -2,6 +2,8 @@
 // change takes effect for every caller without restarting.
 
 import * as fs from 'node:fs'
+import { defaultLookIn } from './looks'
+import type { Look } from '@shared/presets'
 import * as path from 'node:path'
 import { app } from 'electron'
 import { CURSOR_SKINS, DEFAULT_CURSOR_SKIN, LEGACY_CURSOR_SKINS, type AppSettings, type CursorMode, type CursorSkin } from '@shared/ipc'
@@ -99,6 +101,11 @@ export function setRecordingsRoot(root: string): AppSettings {
 /** 'overlay' hides the real pointer and draws a sprite; 'system' keeps the real pointer. */
 export function getCursorMode(): CursorMode {
   return loadSettings().cursorMode
+}
+
+/** The saved look every new recording starts with, or null for the app's defaults. */
+export function getDefaultLook(): Look | null {
+  return defaultLookIn(app.getPath('userData'))
 }
 
 export function getCursorSkin(): CursorSkin {

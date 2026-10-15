@@ -22,11 +22,12 @@ import { allowImage, mediaUrl } from './media-protocol'
 import { ensureShelf, listTracks } from './music-library'
 import { ensureBackgroundsFolder, listBackgrounds } from './background-library'
 import { IMPORT_EXTENSIONS, importVideo } from './import-video'
+import { deleteLookIn, loadShelf, saveLookIn, setDefaultLookIn } from './looks'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
 import { mergeProject, serializeProject } from './project-io'
 import { saveRecordDefaults } from './record-defaults'
-import { loadSettings, saveSettings, setRecordingsRoot } from './settings'
+import { getDefaultLook, loadSettings, saveSettings, setRecordingsRoot } from './settings'
 import type { RecordingSession } from './recording-session'
 import { listSources, listsThroughPortal, windowPreviews } from './sources'
 import { findGsr } from './linux/gsr'
@@ -327,7 +328,7 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     })
     const picked = result.canceled ? null : (result.filePaths[0] ?? null)
     if (!picked) return null
-    const folder = await importVideo(deps.ffmpegPath(), deps.root(), picked)
+    const folder = await importVideo(deps.ffmpegPath(), deps.root(), picked, getDefaultLook())
     await writeThumbnail(deps.ffmpegPath(), folder).catch(() => null)
     return folder
   })
@@ -356,6 +357,11 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     await fs.promises.writeFile(target, buf)
     return { path: target }
   })
+
+  ipcMain.handle(EDITOR.listLooks, () => loadShelf(app.getPath('userData')))
+  ipcMain.handle(EDITOR.saveLook, (_e, name: string, look: import('@shared/presets').Look) => saveLookIn(app.getPath('userData'), String(name ?? ''), look))
+  ipcMain.handle(EDITOR.deleteLook, (_e, id: string) => deleteLookIn(app.getPath('userData'), String(id)))
+  ipcMain.handle(EDITOR.setDefaultLook, (_e, id: string | null) => setDefaultLookIn(app.getPath('userData'), id ? String(id) : null))
 
   ipcMain.handle(EDITOR.saveCaptions, async (_e, folder: string, name: string, text: string) => {
     const dir = assertInsideRoot(deps.root(), folder)

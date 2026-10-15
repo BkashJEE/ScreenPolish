@@ -4,7 +4,7 @@
 // CSS selector list, and three sections shipped on none of them.)
 
 export const INSPECTOR_TABS = [
-  { id: 'scene', label: 'Scene', sections: ['Layout', 'Background', 'Frame', 'Mockup', 'Editor feel'] },
+  { id: 'scene', label: 'Scene', sections: ['Looks', 'Layout', 'Background', 'Frame', 'Mockup', 'Editor feel'] },
   { id: 'timeline', label: 'Timeline', sections: ['Title cards', 'Cuts', 'Speed regions'] },
   { id: 'motion', label: 'Motion', sections: ['Entrance', 'Cursor', 'Zoom'] },
   { id: 'layers', label: 'Layers', sections: ['Webcam', 'Layers', 'Captions'] },

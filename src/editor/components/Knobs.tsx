@@ -23,6 +23,7 @@ import { formatTime } from '../lib/time'
 import { ImageIcon, Trash, Undo, X } from './icons'
 import { SilencePanel } from './SilencePanel'
 import { CaptionsPanel } from './CaptionsPanel'
+import { LooksPanel } from './LooksPanel'
 import { ScenesPanel } from './ScenesPanel'
 import { INSPECTOR_TABS, inspectorTabCss, type InspectorTab } from '../lib/inspector-tabs'
 import { Button, Chip, ColorField, Kbd, NumberField, Row, Section, Segmented, Select, SliderField, Toggle, cx } from './ui'
@@ -253,6 +254,9 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
       <nav className="inspector-group-nav" aria-label="Inspector categories">
         {INSPECTOR_TABS.map((tab) => <button key={tab.id} type="button" aria-pressed={panel === tab.id} onClick={() => setPanel(tab.id)}>{tab.label}</button>)}
       </nav>
+      <Section title="Looks" defaultOpen={false}>
+        <LooksPanel project={project} onProject={onProject} />
+      </Section>
       <Section title="Editor feel" defaultOpen={false}>
         <Row label="Playful sliders" hint="Elastic drag and spring-back; editor only">
           <Toggle checked={playful} label="Playful sliders" onChange={(enabled) => { setPlayful(enabled); localStorage.setItem('screenpolish.playful-sliders', String(enabled)) }} />

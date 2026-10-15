@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { Project, RecordingEvents } from '@shared/types'
+import type { Look } from '@shared/presets'
 import { formatFolderName } from './naming'
 import { newRecordingProject } from './new-recording-project'
 import { serializeProject } from './project-io'
@@ -91,8 +92,8 @@ export function importedEvents(size: { width: number; height: number }, fileName
 }
 
 /** A project for the import: the usual new-take defaults, named after the file, at its frame rate. */
-export function importedProject(fileName: string, fps: number): Project {
-  const project = newRecordingProject({ title: path.basename(fileName, path.extname(fileName)), fps: fps > 45 ? 60 : 30, cursorSkin: 'arrow' })
+export function importedProject(fileName: string, fps: number, style: Look | null = null): Project {
+  const project = newRecordingProject({ title: path.basename(fileName, path.extname(fileName)), fps: fps > 45 ? 60 : 30, cursorSkin: 'arrow', style })
   return { ...project, zoom: { ...project.zoom, auto: false } }
 }
 
@@ -114,7 +115,7 @@ function freeFolder(root: string, now: Date): string {
 }
 
 /** Import `file` into `root`; resolves with the new recording's folder. */
-export async function importVideo(ffmpeg: string, root: string, file: string): Promise<string> {
+export async function importVideo(ffmpeg: string, root: string, file: string, style: Look | null = null): Promise<string> {
   const probe = parseProbe((await run(ffmpeg, ['-hide_banner', '-i', file])).err)
   if (!probe) throw new Error(`${path.basename(file)} has no video ScreenPolish can read.`)
   fs.mkdirSync(root, { recursive: true })
@@ -130,7 +131,7 @@ export async function importVideo(ffmpeg: string, root: string, file: string): P
     }
     const size = displaySize(probe)
     fs.writeFileSync(path.join(dir, 'events.json'), JSON.stringify(importedEvents(size, path.basename(file))))
-    fs.writeFileSync(path.join(dir, 'project.json'), serializeProject(importedProject(file, probe.fps)))
+    fs.writeFileSync(path.join(dir, 'project.json'), serializeProject(importedProject(file, probe.fps, style)))
     return dir
   } catch (error) {
     fs.rmSync(dir, { recursive: true, force: true })

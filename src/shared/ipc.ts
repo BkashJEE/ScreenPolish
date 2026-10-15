@@ -162,6 +162,10 @@ export const EDITOR = {
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
   saveCaptions: 'polish:captions:save-srt',
+  listLooks: 'polish:looks:list',
+  saveLook: 'polish:looks:save',
+  deleteLook: 'polish:looks:delete',
+  setDefaultLook: 'polish:looks:set-default',
   openBackgroundsFolder: 'polish:backgrounds:open-folder',
   saveImage: 'polish:image:save',
   setCover: 'polish:image:set-cover',
@@ -327,6 +331,13 @@ export interface EditorBridge {
   listMusic: () => Promise<MusicTrack[]>
   /** Open the shelf in the file manager, so tracks can be dropped in. */
   openMusicFolder: () => Promise<void>
+  /** Saved looks, and which one new recordings start with. */
+  listLooks: () => Promise<import('./presets').LookShelf>
+  /** Save a look under a name (an existing name is replaced). */
+  saveLook: (name: string, look: import('./presets').Look) => Promise<import('./presets').LookShelf>
+  deleteLook: (id: string) => Promise<import('./presets').LookShelf>
+  /** The look every new recording starts with; null for the app's defaults. */
+  setDefaultLook: (id: string | null) => Promise<import('./presets').LookShelf>
   /** Write captions as <folder>/exports/<name>.srt; resolves with the file's path. */
   saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
