@@ -32,7 +32,6 @@ const bridge: EditorBridge = {
   saveCaptions: (folder, name, text) => ipcRenderer.invoke(EDITOR.saveCaptions, folder, name, text),
   listLooks: () => ipcRenderer.invoke(EDITOR.listLooks),
   cleanMic: (folder) => ipcRenderer.invoke(EDITOR.cleanMic, folder),
-  findTyping: (folder) => ipcRenderer.invoke(EDITOR.findTyping, folder),
   saveLook: (name, look) => ipcRenderer.invoke(EDITOR.saveLook, name, look),
   deleteLook: (id) => ipcRenderer.invoke(EDITOR.deleteLook, id),
   setDefaultLook: (id) => ipcRenderer.invoke(EDITOR.setDefaultLook, id),

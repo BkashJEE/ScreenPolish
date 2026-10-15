@@ -141,7 +141,6 @@ export async function installMockBridge(): Promise<void> {
     saveCaptions: async (_folder, name) => `/mock/exports/${name}.srt`,
     listLooks: async () => ({ presets: [], defaultId: null }),
     cleanMic: async () => 'polish://media/mock/mic.clean.m4a',
-    findTyping: async () => [],
     saveLook: async (name, look) => ({ presets: [{ id: 'mock', name, look }], defaultId: null }),
     deleteLook: async () => ({ presets: [], defaultId: null }),
     setDefaultLook: async () => ({ presets: [], defaultId: null }),
