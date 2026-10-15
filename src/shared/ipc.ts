@@ -163,6 +163,7 @@ export const EDITOR = {
   importVideo: 'polish:recordings:import-video',
   saveCaptions: 'polish:captions:save-srt',
   cleanMic: 'polish:audio:clean-mic',
+  findTyping: 'polish:edit:find-typing',
   listLooks: 'polish:looks:list',
   saveLook: 'polish:looks:save',
   deleteLook: 'polish:looks:delete',
@@ -339,6 +340,8 @@ export interface EditorBridge {
   deleteLook: (id: string) => Promise<import('./presets').LookShelf>
   /** The look every new recording starts with; null for the app's defaults. */
   setDefaultLook: (id: string | null) => Promise<import('./presets').LookShelf>
+  /** Stretches of typing in a recording, in source seconds, found in the picture. */
+  findTyping: (folder: string) => Promise<Array<{ start: number; end: number }>>
   /** Make the cleaned-up microphone for a recording; resolves with its media URL. */
   cleanMic: (folder: string) => Promise<string>
   /** Write captions as <folder>/exports/<name>.srt; resolves with the file's path. */

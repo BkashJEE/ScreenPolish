@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import type { Project } from '../../shared/types'
 import { CAPTION_SIZE_RANGE, CAPTIONS_NOT_INSTALLED, DEFAULT_CAPTIONS, DEFAULT_CAPTION_HIGHLIGHT, editCue, normalizeCaptions, type CaptionPosition, type CaptionSettings, type CaptionStyle, type CaptionsStatus } from '../../shared/captions'
 import { projectSrt } from '../lib/captions-srt'
+import { FILLER_CUT_PREFIX, fillerSummary, findFillers } from '../../shared/fillers'
+import { removeSilences, restoreSilences } from '../../shared/silence'
+import { effectiveTrim } from '../../shared/layout'
 import { formatTime } from '../lib/time'
 import { Spinner } from './icons'
 import { Button, Chip, ColorField, Row, Segmented, SliderField, Toggle } from './ui'
@@ -168,6 +171,7 @@ export function CaptionsPanel({
               Export .srt
             </Button>
           </div>
+          <FillerRow project={project} onProject={onProject} duration={duration} />
           {saved && (
             <p className="text-[11px] text-fg-muted">
               Saved{' '}
@@ -199,6 +203,44 @@ export function CaptionsPanel({
             ))}
           </ol>
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Remove filler words: every "um" and "uh" the transcriber marked becomes a
+ * cut, tagged so the whole set can be put back. Running it again replaces the
+ * previous set; the user's own cuts are never touched.
+ */
+function FillerRow({ project, onProject, duration }: { project: Project; onProject: (update: (p: Project) => Project) => void; duration: number }) {
+  const found = findFillers(normalizeCaptions(project.captions).cues)
+  const removed = fillerSummary(project.cuts)
+  if (removed.count === 0 && found.length === 0) return <p className="text-[11px] text-fg-dim">No filler words (um, uh) were found.</p>
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] text-fg-muted">
+        {removed.count > 0
+          ? `${removed.count} filler ${removed.count === 1 ? 'word' : 'words'} cut (${removed.seconds.toFixed(1)} s)`
+          : `${found.length} filler ${found.length === 1 ? 'word' : 'words'} found: ${[...new Set(found.map((f) => f.word.toLowerCase()))].slice(0, 4).join(', ')}`}
+      </span>
+      {removed.count > 0 ? (
+        <Button size="sm" className="ml-auto" onClick={() => onProject((p) => ({ ...p, ...restoreSilences(p.cuts, p.splits, FILLER_CUT_PREFIX) }))}>
+          Put back
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          className="ml-auto"
+          onClick={() =>
+            onProject((p) => {
+              const clean = restoreSilences(p.cuts, p.splits, FILLER_CUT_PREFIX)
+              return { ...p, ...removeSilences(found, clean.cuts, clean.splits, effectiveTrim(p, duration), FILLER_CUT_PREFIX) }
+            })
+          }
+        >
+          Remove filler words
+        </Button>
       )}
     </div>
   )

@@ -20,7 +20,8 @@ import { BannerMark } from '../../brand/ui'
 import { GRADIENT_PRESETS, SOLID_PRESETS, backgroundCss, matchPreset, matchSolidPreset, patchGroup, BUNDLED_BACKGROUNDS, BACKGROUND_GROUPS, imageUrlForPath } from '../lib/project'
 import { clampFocus, type SegmentPatch } from '../lib/segments'
 import { formatTime } from '../lib/time'
-import { ImageIcon, Trash, Undo, X } from './icons'
+import { ImageIcon, Spinner, Trash, Undo, X } from './icons'
+import { TYPING_RATE, typingRegions } from '../lib/typing-regions'
 import { SilencePanel } from './SilencePanel'
 import { CaptionsPanel } from './CaptionsPanel'
 import { LooksPanel } from './LooksPanel'
@@ -122,6 +123,44 @@ function FolderBackgrounds({ selected, onPick }: { selected: string | undefined;
       ) : (
         images && <p className="text-[11.5px] leading-[1.45] text-fg-dim">Put pictures in Pictures/ScreenPolish and they appear here.</p>
       )}
+    </div>
+  )
+}
+
+/**
+ * Speed up typing: look through the picture for stretches of typing and add a
+ * speed region over each, leaving any stretch that already has one alone.
+ * Each is an ordinary region, so it can be moved, slowed or removed.
+ */
+function TypingSpeedUp({ folder, regions, onProject }: { folder: string; regions: NonNullable<Project['speedRegions']>; onProject: (update: (p: Project) => Project) => void }) {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        size="sm"
+        disabled={busy}
+        icon={busy ? <Spinner size={12} /> : undefined}
+        title="Find where you were typing and play it at 3x"
+        onClick={() => {
+          setBusy(true)
+          setNote(null)
+          window.polish
+            .findTyping(folder)
+            .then((ranges) => {
+              const fresh = typingRegions(ranges, regions)
+              const added = fresh.length
+              const seconds = fresh.reduce((a, r) => a + (r.end - r.start), 0)
+              if (added) onProject((p) => ({ ...p, speedRegions: [...(p.speedRegions ?? []), ...fresh] }))
+              setNote(added ? `Sped up ${added} stretch${added === 1 ? '' : 'es'} of typing (${seconds.toFixed(1)} s, now ${(seconds / TYPING_RATE).toFixed(1)} s).` : ranges.length ? 'The typing found already has speed regions.' : 'No typing found in this recording.')
+            })
+            .catch((e: unknown) => setNote((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))
+            .finally(() => setBusy(false))
+        }}
+      >
+        {busy ? 'Looking for typing…' : 'Speed up typing'}
+      </Button>
+      {note && <p className="text-[11px] text-fg-muted">{note}</p>}
     </div>
   )
 }
@@ -366,6 +405,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           <Button size="sm" onClick={() => onProject((p) => ({ ...p, speedRegions: (p.speedRegions ?? []).filter((v) => v.id !== r.id) }))}>Remove</Button>
         </div>)}
         <Button size="sm" disabled={duration <= 0} onClick={() => onProject((p) => ({ ...p, speedRegions: [...(p.speedRegions ?? []), { id: crypto.randomUUID(), start: p.trim.start, end: Math.min(duration, p.trim.start + 3), rate: 2 }] }))}>Add speed region</Button>
+        <TypingSpeedUp folder={files.folder} regions={project.speedRegions ?? []} onProject={onProject} />
       </Section>
       <Section title="Cuts" right={removedClips > 0 ? <Chip tone="info">{removedClips} removed</Chip> : undefined}>
         <p className="text-[11px] text-fg-muted">

@@ -24,6 +24,7 @@ import { ensureBackgroundsFolder, listBackgrounds } from './background-library'
 import { IMPORT_EXTENSIONS, importVideo } from './import-video'
 import { deleteLookIn, loadShelf, saveLookIn, setDefaultLookIn } from './looks'
 import { CLEAN_MIC_FILE, cleanMic } from './voice-cleanup'
+import { findTyping } from './typing'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
 import { mergeProject, serializeProject } from './project-io'
@@ -364,6 +365,12 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     const dir = assertInsideRoot(deps.root(), folder)
     await cleanMic(deps.ffmpegPath(), dir)
     return mediaUrl(dir, CLEAN_MIC_FILE)
+  })
+
+  ipcMain.handle(EDITOR.findTyping, async (_e, folder: string) => {
+    const dir = assertInsideRoot(deps.root(), folder)
+    const events = JSON.parse(await fs.promises.readFile(path.join(dir, 'events.json'), 'utf8')) as RecordingEvents
+    return findTyping(deps.ffmpegPath(), path.join(dir, 'screen.mp4'), events)
   })
 
   ipcMain.handle(EDITOR.listLooks, () => loadShelf(app.getPath('userData')))

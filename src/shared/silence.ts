@@ -98,22 +98,25 @@ export function findSilences(levelsDb: ArrayLike<number>, windowSec: number, ran
  * Remove `silences` as clips: slice at each edge and cut the range. Returns
  * the new cuts and splits. Existing cuts are kept; overlapping ones merge.
  */
-export function removeSilences(silences: readonly Range[], cuts: readonly Cut[] | undefined, splits: readonly number[] | undefined, trim: Range): { cuts: Cut[]; splits: number[] } {
+export function removeSilences(silences: readonly Range[], cuts: readonly Cut[] | undefined, splits: readonly number[] | undefined, trim: Range, prefix = SILENCE_CUT_PREFIX): { cuts: Cut[]; splits: number[] } {
   let nextSplits = [...(splits ?? [])]
   const added: Cut[] = []
   for (const s of silences) {
     nextSplits = splitAt(s.start, nextSplits, trim)
     nextSplits = splitAt(s.end, nextSplits, trim)
-    added.push({ id: `${SILENCE_CUT_PREFIX}${Math.round(s.start * 1000)}-${Math.round(s.end * 1000)}`, start: s.start, end: s.end })
+    added.push({ id: `${prefix}${Math.round(s.start * 1000)}-${Math.round(s.end * 1000)}`, start: s.start, end: s.end })
   }
   return { cuts: normalizeCuts([...(cuts ?? []), ...added]), splits: nextSplits }
 }
 
-/** Put every silence cut back, and the slices it added, keeping the user's own cuts. */
-export function restoreSilences(cuts: readonly Cut[] | undefined, splits: readonly number[] | undefined): { cuts: Cut[]; splits: number[] } {
+/**
+ * Put every silence cut back, and the slices it added, keeping the user's own
+ * cuts. `prefix` picks another kind of generated cut (filler words use their own).
+ */
+export function restoreSilences(cuts: readonly Cut[] | undefined, splits: readonly number[] | undefined, prefix = SILENCE_CUT_PREFIX): { cuts: Cut[]; splits: number[] } {
   const all = normalizeCuts(cuts)
-  const silence = all.filter((c) => c.id.startsWith(SILENCE_CUT_PREFIX))
-  const kept = all.filter((c) => !c.id.startsWith(SILENCE_CUT_PREFIX))
+  const silence = all.filter((c) => c.id.startsWith(prefix))
+  const kept = all.filter((c) => !c.id.startsWith(prefix))
   const edges = new Set(silence.flatMap((c) => [c.start, c.end]))
   const keptEdges = new Set(kept.flatMap((c) => [c.start, c.end]))
   return {
