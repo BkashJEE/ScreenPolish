@@ -79,8 +79,12 @@ export interface SourceCropRect {
 /** Reference frame interval for screen motion blur: the shutter is a fraction of one 60 fps frame, so the
  *  smear looks the same whatever the export frame rate. */
 export const SCREEN_BLUR_FRAME_SEC = 1 / 60
-/** Most copies of the screen drawn for one blurred frame; each copy is a full-size video draw. */
-export const SCREEN_BLUR_MAX_TAPS = 12
+/** Most copies of the screen drawn for one blurred frame; each copy is a full-size video draw. Six showed visible
+ *  ghost steps on a fast zoom; ten reads as one smooth smear and still costs less than the first cut's twelve. */
+export const SCREEN_BLUR_MAX_TAPS = 10
+/** Smears shorter than this many output px are invisible; drawing them only slows export (the zoom's follow
+ *  drift alone produced ~140 such frames in a 15 s take). */
+export const SCREEN_BLUR_MIN_SPAN_PX = 3
 
 function lerpMapping(a: VideoMapping, b: VideoMapping, u: number): VideoMapping {
   return { scale: a.scale + (b.scale - a.scale) * u, tx: a.tx + (b.tx - a.tx) * u, ty: a.ty + (b.ty - a.ty) * u }
@@ -93,7 +97,8 @@ function lerpMapping(a: VideoMapping, b: VideoMapping, u: number): VideoMapping 
  * `amount` of that frame, centred on `cur`, and the camera is sampled evenly across it: a pan smears
  * along its direction and a zoom smears outward from its centre, because scale and offset move
  * together. The number of samples follows how far the picture actually moves (about one per
- * 1.5 output px, capped), so a still camera returns just `cur` and costs nothing extra.
+ * 1.5 output px, capped), and a smear too short to see returns just `cur`, so still frames and
+ * slow drift cost nothing extra.
  */
 export function screenBlurMappings(
   prev: VideoMapping,
@@ -112,7 +117,7 @@ export function screenBlurMappings(
     Math.abs(b.ty + b.scale * source.height - (a.ty + a.scale * source.height))
   )
   const span = (travel(prev, cur) + travel(cur, next)) * 0.5 * strength
-  if (!(span >= 1)) return [cur]
+  if (!(span >= SCREEN_BLUR_MIN_SPAN_PX)) return [cur]
   const taps = Math.min(Math.max(2, Math.floor(maxTaps)), Math.max(2, Math.ceil(span / 1.5)))
   const out: VideoMapping[] = []
   for (let i = 0; i < taps; i++) {
@@ -1123,8 +1128,10 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
   if (shots.length === 1) drawScreenAt(shots[0])
   else {
     const alpha = card.globalAlpha
-    shots.forEach((m, i) => { card.globalAlpha = alpha / (i + 1); drawScreenAt(m) })
+    // Copies after the first are averaged into a blur, so the costly 'high' resampling buys nothing there.
+    shots.forEach((m, i) => { card.globalAlpha = alpha / (i + 1); if (i === 1) card.imageSmoothingQuality = 'medium'; drawScreenAt(m) })
     card.globalAlpha = alpha
+    card.imageSmoothingQuality = 'high'
   }
 
   // 6. Ripples go under the cursor so the pointer stays readable.

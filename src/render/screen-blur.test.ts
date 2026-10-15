@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SCREEN_BLUR_MAX_TAPS, screenBlurMappings } from './render-frame'
+import { SCREEN_BLUR_MAX_TAPS, SCREEN_BLUR_MIN_SPAN_PX, screenBlurMappings } from './render-frame'
 
 const src = { width: 1920, height: 1080 }
 const at = (tx: number, ty: number, scale = 1) => ({ tx, ty, scale })
@@ -40,5 +40,10 @@ describe('screen motion blur', () => {
 
   it('ignores sub-pixel motion', () => {
     expect(screenBlurMappings(at(-0.4, 0), at(0, 0), at(0.4, 0), src, 1)).toHaveLength(1)
+  })
+
+  it('skips smears too short to see, so a slow follow drift costs nothing in export', () => {
+    expect(screenBlurMappings(at(-2, 0), at(0, 0), at(2, 0), src, 1)).toHaveLength(1)
+    expect(screenBlurMappings(at(-SCREEN_BLUR_MIN_SPAN_PX, 0), at(0, 0), at(SCREEN_BLUR_MIN_SPAN_PX, 0), src, 1).length).toBeGreaterThan(1)
   })
 })
