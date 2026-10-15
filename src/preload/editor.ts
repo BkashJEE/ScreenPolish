@@ -32,6 +32,13 @@ const bridge: EditorBridge = {
   saveCaptions: (folder, name, text) => ipcRenderer.invoke(EDITOR.saveCaptions, folder, name, text),
   listLooks: () => ipcRenderer.invoke(EDITOR.listLooks),
   cleanMic: (folder) => ipcRenderer.invoke(EDITOR.cleanMic, folder),
+  updateState: () => ipcRenderer.invoke(EDITOR.updateState),
+  installUpdate: () => ipcRenderer.invoke(EDITOR.installUpdate),
+  onUpdateChanged: (handler) => {
+    const listener = (_e: unknown, state: Parameters<typeof handler>[0]) => handler(state)
+    ipcRenderer.on(EDITOR.updateChanged, listener)
+    return () => ipcRenderer.removeListener(EDITOR.updateChanged, listener)
+  },
   saveLook: (name, look) => ipcRenderer.invoke(EDITOR.saveLook, name, look),
   deleteLook: (id) => ipcRenderer.invoke(EDITOR.deleteLook, id),
   setDefaultLook: (id) => ipcRenderer.invoke(EDITOR.setDefaultLook, id),

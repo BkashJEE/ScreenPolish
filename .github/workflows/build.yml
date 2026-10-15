@@ -64,8 +64,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: screenpolish-${{ matrix.name }}
+          # latest.yml and the installer's blockmap are what the Windows app's
+          # updater reads to find and download a new version.
           path: |
             release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
             release/*.dmg
             release/*.zip
             release/*.AppImage
@@ -110,9 +114,12 @@ jobs:
           count=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')
           echo "attached $count files"
           # Seven installers for every platform and architecture, the Linux
-          # one-command installer, and the checksums. Fewer means something did
-          # not build, and a release missing a platform should be noticed here,
-          # not by the person who cannot download it.
-          [ "$count" -ge 9 ] || { echo "expected 9 files, found $count"; exit 1; }
+          # one-command installer, the Windows updater's latest.yml and
+          # blockmap, and the checksums. Fewer means something did not build,
+          # and a release missing a platform should be noticed here, not by
+          # the person who cannot download it.
+          [ "$count" -ge 11 ] || { echo "expected 11 files, found $count"; exit 1; }
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx 'latest.yml' \
+            || { echo "the Windows updater's latest.yml is missing"; exit 1; }
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx 'ScreenPolish-installer.run' \
             || { echo "the README's Linux installer is missing"; exit 1; }

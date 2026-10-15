@@ -2,9 +2,10 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { Notification, app, dialog, globalShortcut, ipcMain, screen } from 'electron'
+import { BrowserWindow, Notification, app, dialog, globalShortcut, ipcMain, screen } from 'electron'
 import ffmpegStatic from 'ffmpeg-static'
-import type { StartRecordingRequest } from '@shared/ipc'
+import { EDITOR, type StartRecordingRequest } from '@shared/ipc'
+import { startUpdater, updatesEnabled, type Updater } from './updater'
 import { cliArgs, handleCliPayload, runCliClient } from './cli'
 import { looksLikeCli } from './cli-parse'
 import { isCursorHidden, recoverCursorsIfNeeded, restoreSystemCursor } from './win/cursor-manager'
@@ -238,6 +239,28 @@ async function main(): Promise<void> {
     whisper: () => whisperFiles({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath(), platform: process.platform }),
     applyShortcuts: (keys) => { applyShortcuts(keys); setTimeout(() => tray?.update(session.state), 0) }
   })
+
+  // Windows updates itself from published releases; elsewhere this stays idle.
+  let update: ReturnType<typeof startUpdater> | null = null
+  ipcMain.handle(EDITOR.updateState, () => update?.state() ?? { status: 'idle' })
+  ipcMain.handle(EDITOR.installUpdate, () => {
+    if (!update) throw new Error('This build does not update itself.')
+    update.install()
+  })
+  if (updatesEnabled(process.platform, app.isPackaged, process.env)) {
+    void import('electron-updater')
+      .then(({ autoUpdater }) => {
+        update = startUpdater({
+          updater: autoUpdater as unknown as Updater,
+          canRestart: () => session.state.status === 'idle' && !exportSink.busy(),
+          onState: (state) => {
+            for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send(EDITOR.updateChanged, state)
+          },
+          log: (message) => console.log(message)
+        })
+      })
+      .catch((err) => console.warn('[updater] could not start', err))
+  }
 
   // However the buffer changes - the tray, the shortcut, the CLI, an agent over
   // MCP, or gsr dying - the menu reflects it.

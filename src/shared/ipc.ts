@@ -163,6 +163,10 @@ export const EDITOR = {
   importVideo: 'polish:recordings:import-video',
   saveCaptions: 'polish:captions:save-srt',
   cleanMic: 'polish:audio:clean-mic',
+  updateState: 'polish:update:state',
+  installUpdate: 'polish:update:install',
+  /** main -> editor push */
+  updateChanged: 'polish:update:changed',
   listLooks: 'polish:looks:list',
   saveLook: 'polish:looks:save',
   deleteLook: 'polish:looks:delete',
@@ -294,6 +298,9 @@ export interface StartRecordingRequest {
   maxDurationSec?: number
 }
 
+/** Where a Windows self-update stands; see main/updater.ts. Other platforms stay idle. */
+export type UpdateState = { status: 'idle' } | { status: 'downloading'; version: string; percent: number } | { status: 'ready'; version: string }
+
 /** API exposed to the editor by src/preload/editor.ts as window.polish */
 export interface MusicTrack {
   path: string
@@ -339,6 +346,12 @@ export interface EditorBridge {
   deleteLook: (id: string) => Promise<import('./presets').LookShelf>
   /** The look every new recording starts with; null for the app's defaults. */
   setDefaultLook: (id: string | null) => Promise<import('./presets').LookShelf>
+  /** The Windows self-update's state; always idle elsewhere. */
+  updateState: () => Promise<UpdateState>
+  /** Restart into the downloaded update. Refused while recording or exporting. */
+  installUpdate: () => Promise<void>
+  /** Called when the update's state changes; returns an unsubscribe. */
+  onUpdateChanged: (handler: (state: UpdateState) => void) => () => void
   /** Make the cleaned-up microphone for a recording; resolves with its media URL. */
   cleanMic: (folder: string) => Promise<string>
   /** Write captions as <folder>/exports/<name>.srt; resolves with the file's path. */
