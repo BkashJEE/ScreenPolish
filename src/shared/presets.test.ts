@@ -38,6 +38,11 @@ describe('looks', () => {
     expect(out.trim).toEqual({ start: 2, end: 9 })
   })
 
+  it('replace the background whole, leaving nothing of the old one', () => {
+    const plain = lookFromProject({ ...DEFAULT_PROJECT, background: { kind: 'solid', colors: ['#39445f'], angle: 0 } })
+    expect(applyLook(styled, plain).background).toEqual({ kind: 'solid', colors: ['#39445f'], angle: 0 })
+  })
+
   it('are copies, so editing the project later does not change a saved look', () => {
     const look = lookFromProject(styled)
     const out = applyLook(DEFAULT_PROJECT, look)

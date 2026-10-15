@@ -76,7 +76,8 @@ export function applyLook(project: Project, look: Look): Project {
   const l = clone(look)
   return {
     ...project,
-    background: { ...project.background, ...l.background },
+    // Whole groups are replaced, not merged, so nothing from the old style lingers (an image path under a solid colour).
+    background: l.background,
     frame: { ...project.frame, ...l.frame },
     mockup: { ...project.mockup, ...l.mockup },
     animation: { ...project.animation, ...l.animation },
