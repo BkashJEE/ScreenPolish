@@ -1254,7 +1254,7 @@ export function renderFrame(ctx: Ctx2D, input: FrameInput): void {
   if (animated) ctx.restore()
 
   // 9. Captions: outside the entrance animation and the camera, so they hold still.
-  drawCaptions(ctx, output, project.captions, input.tSec)
+  drawCaptions(ctx, output, project.captions, input.tSec, project.cuts)
 }
 
 export function drawWebcam(

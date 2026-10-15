@@ -98,6 +98,20 @@ export function sourceTimeAt(outputTime: number, spans: readonly SpeedSpan[]): n
   return span ? Math.min(span.end, span.start + Math.max(0, outputTime - span.outputStart) * span.rate) : 0
 }
 
+/**
+ * Where source time `t` lands in the output: the reverse of sourceTimeAt. A
+ * moment that was cut, or lies outside the trim, lands on the nearest kept
+ * edge, so a stretch that was removed collapses to a single point.
+ */
+export function outputTimeAt(t: number, spans: readonly SpeedSpan[]): number {
+  if (spans.length === 0) return 0
+  for (const s of spans) {
+    if (t < s.start) return s.outputStart
+    if (t <= s.end) return s.outputStart + (t - s.start) / s.rate
+  }
+  return spans.at(-1)!.outputEnd
+}
+
 // ---------------------------------------------------------------------------
 // Clip speed
 

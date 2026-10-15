@@ -62,8 +62,15 @@ export function whisperThreads(cores: number = os.availableParallelism()): numbe
 }
 
 export function whisperArgs(files: WhisperFiles, wav: string, outBase: string, threads: number): string[] {
-  return ['-m', files.model, '-f', wav, '-t', String(threads), '-l', 'en', '-oj', '-of', outBase, '-np', '-pp', '-ml', String(CAPTION_LINE_CHARS), '-sow']
+  return ['-m', files.model, '-f', wav, '-t', String(threads), '-l', 'en', '-ojf', '-of', outBase, '-np', '-pp', '-ml', String(CAPTION_LINE_CHARS), '-sow', '--prompt', VERBATIM_PROMPT]
 }
+
+/**
+ * Whisper tidies speech by leaving out "um" and "uh". A short prompt written
+ * the way people talk keeps them, which is what Remove filler words needs to
+ * find them; the captions' wording is otherwise unchanged.
+ */
+export const VERBATIM_PROMPT = 'Umm, so, uh, let me show you. Hmm, okay, here it is.'
 
 /** Percent from a whisper-cli progress line on stderr, e.g. "... progress =  45%". */
 export function parseWhisperProgress(line: string): number | null {

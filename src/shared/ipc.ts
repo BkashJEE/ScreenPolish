@@ -133,7 +133,7 @@ export interface LoadedProject {
   events: RecordingEvents
   project: Project
   /** Media URLs on the polish:// protocol, usable in <video src> and fetch with Range. */
-  urls: { screen: string; mic?: string; system?: string; webcam?: string }
+  urls: { screen: string; mic?: string; micClean?: string; system?: string; webcam?: string }
 }
 
 export const EDITOR = {
@@ -161,6 +161,12 @@ export const EDITOR = {
   openMusicFolder: 'polish:music:open-folder',
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
+  saveCaptions: 'polish:captions:save-srt',
+  cleanMic: 'polish:audio:clean-mic',
+  listLooks: 'polish:looks:list',
+  saveLook: 'polish:looks:save',
+  deleteLook: 'polish:looks:delete',
+  setDefaultLook: 'polish:looks:set-default',
   openBackgroundsFolder: 'polish:backgrounds:open-folder',
   saveImage: 'polish:image:save',
   setCover: 'polish:image:set-cover',
@@ -326,6 +332,17 @@ export interface EditorBridge {
   listMusic: () => Promise<MusicTrack[]>
   /** Open the shelf in the file manager, so tracks can be dropped in. */
   openMusicFolder: () => Promise<void>
+  /** Saved looks, and which one new recordings start with. */
+  listLooks: () => Promise<import('./presets').LookShelf>
+  /** Save a look under a name (an existing name is replaced). */
+  saveLook: (name: string, look: import('./presets').Look) => Promise<import('./presets').LookShelf>
+  deleteLook: (id: string) => Promise<import('./presets').LookShelf>
+  /** The look every new recording starts with; null for the app's defaults. */
+  setDefaultLook: (id: string | null) => Promise<import('./presets').LookShelf>
+  /** Make the cleaned-up microphone for a recording; resolves with its media URL. */
+  cleanMic: (folder: string) => Promise<string>
+  /** Write captions as <folder>/exports/<name>.srt; resolves with the file's path. */
+  saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
   importVideo: () => Promise<string | null>
   /** Pictures in your backgrounds folder, ready to use as a background. */

@@ -138,6 +138,12 @@ export async function installMockBridge(): Promise<void> {
     openMusicFolder: async () => console.info('[mock] openMusicFolder'),
     listBackgrounds: async () => [],
     importVideo: async () => null,
+    saveCaptions: async (_folder, name) => `/mock/exports/${name}.srt`,
+    listLooks: async () => ({ presets: [], defaultId: null }),
+    cleanMic: async () => 'polish://media/mock/mic.clean.m4a',
+    saveLook: async (name, look) => ({ presets: [{ id: 'mock', name, look }], defaultId: null }),
+    deleteLook: async () => ({ presets: [], defaultId: null }),
+    setDefaultLook: async () => ({ presets: [], defaultId: null }),
     openBackgroundsFolder: async () => console.info('[mock] openBackgroundsFolder'),
     saveImage: async (req) => {
       console.info('[mock] saveImage', req.name, req.format, req.data.byteLength, 'bytes')

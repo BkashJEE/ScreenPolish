@@ -67,7 +67,7 @@ describe('captionsStatus', () => {
 describe('whisperArgs', () => {
   it('asks for English JSON, caption-length lines split on words, and progress', () => {
     const args = whisperArgs({ bin: 'b', model: 'm.bin' }, 'a.wav', '/tmp/out', 6)
-    expect(args).toEqual(expect.arrayContaining(['-m', 'm.bin', '-f', 'a.wav', '-t', '6', '-l', 'en', '-oj', '-of', '/tmp/out', '-ml', '42', '-sow', '-pp', '-np']))
+    expect(args).toEqual(expect.arrayContaining(['-m', 'm.bin', '-f', 'a.wav', '-t', '6', '-l', 'en', '-ojf', '-of', '/tmp/out', '-ml', '42', '-sow', '-pp', '-np']))
   })
 })
 

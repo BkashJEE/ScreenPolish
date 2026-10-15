@@ -22,11 +22,13 @@ import { allowImage, mediaUrl } from './media-protocol'
 import { ensureShelf, listTracks } from './music-library'
 import { ensureBackgroundsFolder, listBackgrounds } from './background-library'
 import { IMPORT_EXTENSIONS, importVideo } from './import-video'
+import { deleteLookIn, loadShelf, saveLookIn, setDefaultLookIn } from './looks'
+import { CLEAN_MIC_FILE, cleanMic } from './voice-cleanup'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
 import { mergeProject, serializeProject } from './project-io'
 import { saveRecordDefaults } from './record-defaults'
-import { loadSettings, saveSettings, setRecordingsRoot } from './settings'
+import { getDefaultLook, loadSettings, saveSettings, setRecordingsRoot } from './settings'
 import type { RecordingSession } from './recording-session'
 import { listSources, listsThroughPortal, windowPreviews } from './sources'
 import { findGsr } from './linux/gsr'
@@ -56,6 +58,7 @@ export interface EditorIpcDeps {
 
 const OPTIONAL_FILES = [
   ['mic', 'mic.mp4'],
+  ['micClean', CLEAN_MIC_FILE],
   ['system', 'system.mp4'],
   ['webcam', 'webcam.mp4']
 ] as const
@@ -327,7 +330,7 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     })
     const picked = result.canceled ? null : (result.filePaths[0] ?? null)
     if (!picked) return null
-    const folder = await importVideo(deps.ffmpegPath(), deps.root(), picked)
+    const folder = await importVideo(deps.ffmpegPath(), deps.root(), picked, getDefaultLook())
     await writeThumbnail(deps.ffmpegPath(), folder).catch(() => null)
     return folder
   })
@@ -355,6 +358,27 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     const target = path.join(exportsDir, uniqueName(existing, sanitizeBaseName(request.name), request.format))
     await fs.promises.writeFile(target, buf)
     return { path: target }
+  })
+
+  ipcMain.handle(EDITOR.cleanMic, async (_e, folder: string) => {
+    const dir = assertInsideRoot(deps.root(), folder)
+    await cleanMic(deps.ffmpegPath(), dir)
+    return mediaUrl(dir, CLEAN_MIC_FILE)
+  })
+
+  ipcMain.handle(EDITOR.listLooks, () => loadShelf(app.getPath('userData')))
+  ipcMain.handle(EDITOR.saveLook, (_e, name: string, look: import('@shared/presets').Look) => saveLookIn(app.getPath('userData'), String(name ?? ''), look))
+  ipcMain.handle(EDITOR.deleteLook, (_e, id: string) => deleteLookIn(app.getPath('userData'), String(id)))
+  ipcMain.handle(EDITOR.setDefaultLook, (_e, id: string | null) => setDefaultLookIn(app.getPath('userData'), id ? String(id) : null))
+
+  ipcMain.handle(EDITOR.saveCaptions, async (_e, folder: string, name: string, text: string) => {
+    const dir = assertInsideRoot(deps.root(), folder)
+    if (typeof text !== 'string' || !text.trim()) throw new Error('There are no captions to save.')
+    const exportsDir = path.join(dir, 'exports')
+    await fs.promises.mkdir(exportsDir, { recursive: true })
+    const target = path.join(exportsDir, uniqueName(await fs.promises.readdir(exportsDir), sanitizeBaseName(name), 'srt'))
+    await fs.promises.writeFile(target, text)
+    return target
   })
 
   // Library cover: <folder>/exports/thumb.jpg, which listRecordings already picks up.
