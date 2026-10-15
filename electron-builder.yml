@@ -2,6 +2,14 @@ appId: com.bikashjoshi.screenpolish
 productName: ScreenPolish
 directories:
   output: release
+# Where the Windows app looks for updates (main/updater.ts): published GitHub
+# releases. Builds still run with --publish never; CI attaches the files,
+# including latest.yml, which is what the updater reads.
+publish:
+  provider: github
+  owner: BkashJEE
+  repo: ScreenPolish
+  releaseType: release
 files:
   - out/**
   - package.json
@@ -103,5 +111,8 @@ pacman:
 dmg:
   sign: false
 nsis:
+  # No spaces in the installer's name: GitHub turns them into dots on upload,
+  # and latest.yml would then point at a file that is not there.
+  artifactName: ScreenPolish-Setup-${version}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true

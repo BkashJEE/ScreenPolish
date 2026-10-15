@@ -24,6 +24,8 @@ export interface ExportSink {
   end(request: ExportEndRequest): Promise<ExportEndResponse>
   abort(exportId: string): Promise<void>
   progress(exportId: string, fraction: number): void
+  /** Whether any export is being written right now. */
+  busy(): boolean
 }
 
 interface Job {
@@ -118,6 +120,7 @@ export function createExportSink(deps: ExportSinkDeps): ExportSink {
   }
 
   return {
+    busy: () => jobs.size > 0,
     async begin(request) {
       const folder = assertInsideRoot(deps.root(), request.folder)
       const exportsDir = path.join(folder, 'exports')
