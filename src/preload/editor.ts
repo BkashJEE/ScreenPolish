@@ -29,6 +29,7 @@ const bridge: EditorBridge = {
   openMusicFolder: () => ipcRenderer.invoke(EDITOR.openMusicFolder),
   listBackgrounds: () => ipcRenderer.invoke(EDITOR.listBackgrounds),
   importVideo: () => ipcRenderer.invoke(EDITOR.importVideo),
+  saveCaptions: (folder, name, text) => ipcRenderer.invoke(EDITOR.saveCaptions, folder, name, text),
   openBackgroundsFolder: () => ipcRenderer.invoke(EDITOR.openBackgroundsFolder),
   saveImage: (request) => ipcRenderer.invoke(EDITOR.saveImage, request),
   setCover: (request) => ipcRenderer.invoke(EDITOR.setCover, request),

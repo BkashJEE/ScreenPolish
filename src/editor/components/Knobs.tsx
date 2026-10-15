@@ -941,6 +941,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           project={project}
           onProject={onProject}
           folder={files.folder}
+          duration={duration}
           sources={[...(props.audioUrls?.mic ? (['mic'] as const) : []), ...(props.audioUrls?.system ? (['system'] as const) : [])]}
         />
       </Section>

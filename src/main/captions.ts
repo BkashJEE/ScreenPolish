@@ -62,7 +62,7 @@ export function whisperThreads(cores: number = os.availableParallelism()): numbe
 }
 
 export function whisperArgs(files: WhisperFiles, wav: string, outBase: string, threads: number): string[] {
-  return ['-m', files.model, '-f', wav, '-t', String(threads), '-l', 'en', '-oj', '-of', outBase, '-np', '-pp', '-ml', String(CAPTION_LINE_CHARS), '-sow']
+  return ['-m', files.model, '-f', wav, '-t', String(threads), '-l', 'en', '-ojf', '-of', outBase, '-np', '-pp', '-ml', String(CAPTION_LINE_CHARS), '-sow']
 }
 
 /** Percent from a whisper-cli progress line on stderr, e.g. "... progress =  45%". */

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { Project } from '../../shared/types'
-import { CAPTION_SIZE_RANGE, CAPTIONS_NOT_INSTALLED, DEFAULT_CAPTIONS, editCue, normalizeCaptions, type CaptionPosition, type CaptionSettings, type CaptionsStatus } from '../../shared/captions'
+import { CAPTION_SIZE_RANGE, CAPTIONS_NOT_INSTALLED, DEFAULT_CAPTIONS, DEFAULT_CAPTION_HIGHLIGHT, editCue, normalizeCaptions, type CaptionPosition, type CaptionSettings, type CaptionStyle, type CaptionsStatus } from '../../shared/captions'
+import { projectSrt } from '../lib/captions-srt'
 import { formatTime } from '../lib/time'
 import { Spinner } from './icons'
-import { Button, Chip, Row, Segmented, SliderField, Toggle } from './ui'
+import { Button, Chip, ColorField, Row, Segmented, SliderField, Toggle } from './ui'
 
 type Source = 'mic' | 'system'
 
@@ -15,11 +16,14 @@ export function CaptionsPanel({
   project,
   onProject,
   folder,
+  duration,
   sources
 }: {
   project: Project
   onProject: (update: (p: Project) => Project) => void
   folder: string
+  /** Seconds of recording, for timing the .srt to the export. */
+  duration: number
   sources: Source[]
 }) {
   const captions = normalizeCaptions(project.captions ?? DEFAULT_CAPTIONS)
@@ -30,6 +34,19 @@ export function CaptionsPanel({
   // than failing when Transcribe is pressed.
   const [status, setStatus] = useState<CaptionsStatus | null>(null)
   const busy = progress !== null
+  const [saved, setSaved] = useState<string | null>(null)
+  const style = captions.style ?? 'box'
+
+  const saveSrt = async () => {
+    setError(null)
+    setSaved(null)
+    try {
+      const path = await window.polish.saveCaptions(folder, project.title.trim() || 'captions', projectSrt(project, duration))
+      setSaved(path)
+    } catch (e) {
+      setError((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+    }
+  }
 
   useEffect(() => (busy ? window.polish.onTranscribeProgress((f) => setProgress(f)) : undefined), [busy])
   useEffect(() => {
@@ -105,6 +122,25 @@ export function CaptionsPanel({
           <Row label="Show in video">
             <Toggle checked={captions.enabled} onChange={(enabled) => patch({ enabled })} label="Show captions in video" />
           </Row>
+          <Row label="Style">
+            <Segmented<CaptionStyle>
+              full={false}
+              size="sm"
+              value={style}
+              onChange={(next) => patch({ style: next })}
+              options={[
+                { value: 'box', label: 'Box', title: 'The line on a dark box' },
+                { value: 'karaoke', label: 'Karaoke', title: 'Each word lights up as it is said' },
+                { value: 'bold', label: 'Bold', title: 'Big capitals, a few words at a time' },
+                { value: 'minimal', label: 'Minimal', title: 'White text with a soft shadow' }
+              ]}
+            />
+          </Row>
+          {(style === 'karaoke' || style === 'bold') && (
+            <Row label="Highlight">
+              <ColorField label="Highlight colour" value={captions.highlight ?? DEFAULT_CAPTION_HIGHLIGHT} onChange={(highlight) => patch({ highlight })} />
+            </Row>
+          )}
           <Row label="Position">
             <Segmented<CaptionPosition>
               full={false}
@@ -128,7 +164,19 @@ export function CaptionsPanel({
           />
           <div className="flex items-center gap-2">
             <Chip tone="info">{captions.cues.length} lines</Chip>
+            <Button size="sm" className="ml-auto" title="A subtitle file timed to the export, for YouTube and other players" onClick={() => void saveSrt()}>
+              Export .srt
+            </Button>
           </div>
+          {saved && (
+            <p className="text-[11px] text-fg-muted">
+              Saved{' '}
+              <button type="button" className="underline hover:text-fg" onClick={() => void window.polish.reveal(saved)}>
+                {saved.split('/').pop()}
+              </button>
+              , timed to the export.
+            </p>
+          )}
           <ol className="flex max-h-[320px] flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Caption lines">
             {captions.cues.map((cue) => (
               <li key={cue.id} className="flex flex-col gap-1">

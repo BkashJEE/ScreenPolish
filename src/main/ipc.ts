@@ -357,6 +357,16 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     return { path: target }
   })
 
+  ipcMain.handle(EDITOR.saveCaptions, async (_e, folder: string, name: string, text: string) => {
+    const dir = assertInsideRoot(deps.root(), folder)
+    if (typeof text !== 'string' || !text.trim()) throw new Error('There are no captions to save.')
+    const exportsDir = path.join(dir, 'exports')
+    await fs.promises.mkdir(exportsDir, { recursive: true })
+    const target = path.join(exportsDir, uniqueName(await fs.promises.readdir(exportsDir), sanitizeBaseName(name), 'srt'))
+    await fs.promises.writeFile(target, text)
+    return target
+  })
+
   // Library cover: <folder>/exports/thumb.jpg, which listRecordings already picks up.
   ipcMain.handle(EDITOR.setCover, async (_e, request: SetCoverRequest) => {
     const dir = assertInsideRoot(deps.root(), request.folder)
