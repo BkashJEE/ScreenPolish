@@ -288,7 +288,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
       <nav className="inspector-group-nav" aria-label="Inspector categories">
         {INSPECTOR_TABS.map((tab) => <button key={tab.id} type="button" aria-pressed={panel === tab.id} onClick={() => setPanel(tab.id)}>{tab.label}</button>)}
       </nav>
-      <Section title="Looks" defaultOpen={false}>
+      <Section title="Looks">
         <LooksPanel project={project} onProject={onProject} />
       </Section>
       <Section title="Editor feel" defaultOpen={false}>

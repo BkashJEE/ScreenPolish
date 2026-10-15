@@ -1,3 +1,4 @@
+import { builtinLook } from './builtin-looks'
 import type { CaptionSettings } from './captions'
 import type { Project } from './types'
 
@@ -32,7 +33,7 @@ export interface LookPreset {
 
 export interface LookShelf {
   presets: LookPreset[]
-  /** The look every new recording starts with; null for the app's defaults. */
+  /** The look every new recording starts with, saved or built in; null for the app's defaults. */
   defaultId: string | null
 }
 
@@ -70,7 +71,8 @@ export function lookFromProject(project: Project): Look {
 
 /**
  * `project` dressed in `look`. Whatever belongs to the recording itself is
- * kept, including whether its webcam and captions are switched on.
+ * kept, including whether its webcam and captions are switched on, and the
+ * frame rate it was recorded at.
  */
 export function applyLook(project: Project, look: Look): Project {
   const l = clone(look)
@@ -88,7 +90,7 @@ export function applyLook(project: Project, look: Look): Project {
       : {}),
     webcam: { ...project.webcam, ...l.webcam, enabled: project.webcam.enabled },
     ...(l.cutTransition ? { cutTransition: l.cutTransition } : {}),
-    output: { ...project.output, ...l.output }
+    output: { ...project.output, ...l.output, fps: project.output.fps }
   }
 }
 
@@ -101,7 +103,7 @@ export function normalizeShelf(raw: unknown): LookShelf {
         .slice(0, MAX_LOOKS)
         .map((p) => ({ id: p.id, name: p.name.trim().slice(0, MAX_LOOK_NAME), look: p.look }))
     : []
-  const defaultId = typeof r.defaultId === 'string' && presets.some((p) => p.id === r.defaultId) ? r.defaultId : null
+  const defaultId = typeof r.defaultId === 'string' && (presets.some((p) => p.id === r.defaultId) || builtinLook(r.defaultId)) ? r.defaultId : null
   return { presets, defaultId }
 }
 
@@ -120,10 +122,10 @@ export function deleteLook(shelf: LookShelf, id: string): LookShelf {
 }
 
 export function setDefaultLook(shelf: LookShelf, id: string | null): LookShelf {
-  return { ...shelf, defaultId: id && shelf.presets.some((p) => p.id === id) ? id : null }
+  return { ...shelf, defaultId: id && (shelf.presets.some((p) => p.id === id) || builtinLook(id)) ? id : null }
 }
 
 /** The look new recordings start with, if one is chosen. */
 export function defaultLook(shelf: LookShelf): Look | null {
-  return shelf.presets.find((p) => p.id === shelf.defaultId)?.look ?? null
+  return shelf.presets.find((p) => p.id === shelf.defaultId)?.look ?? builtinLook(shelf.defaultId)?.look ?? null
 }

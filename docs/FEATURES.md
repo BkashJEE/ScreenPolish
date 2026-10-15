@@ -50,7 +50,7 @@ app.
 | Screen, window and region | Record a display, an application window or an area you draw |
 | Cursor-free native capture | `gpu-screen-recorder` records without the system cursor, so the drawn pointer is the only one |
 | Microphone and system audio | Narration and desktop sound, through the PipeWire output monitor |
-| Webcam | A camera bubble beside the recording, with background removal |
+| Webcam | A camera bubble beside the recording, with background removal; mirror it, drag it anywhere, set its margin and shadow |
 | 30 or 60 fps | Chosen before the take |
 | Keyboard shortcuts | Start, stop and pause without leaving what you are recording |
 
@@ -60,8 +60,11 @@ app.
 | --- | --- |
 | Automatic click zoom | Zooms built from the clicks recorded with the take |
 | Editable zoom segments | Move, retime or delete any zoom, or add your own |
+| Zoom templates | Glide, Punchy, Subtle, Smart clicks and more set scale, ease and follow together |
 | Camera styles | Tilt, drift and punch treatments per segment |
-| Cursor smoothing and styles | Arrow, dot, hand or bobbing, at any size |
+| Motion blur | Pans and zooms smear across the shutter the way a camera's do, from off to strong |
+| Cursor smoothing and styles | A golden Star with a trail, a Halo ring, or arrow, dot, hand or bobbing, at any size |
+| Click timing | Moves clicks and the pointer later or earlier against the picture when they land out of step |
 | Click ripples and bounce | Make clicks easy to follow |
 | Idle fade | Fade the pointer out while it rests; movement brings it back |
 | Soft sounds | Quiet taps on clicks and a whoosh under zooms, both optional |
@@ -70,7 +73,8 @@ app.
 
 | Feature | What you can do |
 | --- | --- |
-| Backgrounds | Gradients, solid colours and your own images |
+| Looks | Studio, Shorts and Clean ship ready-made; save your own, and star the one every new recording starts with |
+| Backgrounds | Bright, calm and light images, gradients, solid colours, and anything you drop in `~/Pictures/ScreenPolish` |
 | Omarchy theme | The bundled wallpaper, with its wordmark drawn in the margin |
 | Frame | Padding, corner radius, shadow, and position within the frame |
 | Unified 3D frame | Tilt the whole frame in perspective |
@@ -84,19 +88,24 @@ app.
 | --- | --- |
 | Trim, split and cut | Shape the timeline, and smooth over each cut with a transition |
 | Silence removal | Turn quiet stretches into cuts you can review before applying |
+| Filler words | Find every "um", "uh" and "hmm" in the captions and cut them in one go, or put them back |
 | Speed | 0.25× to 4×, with pitch preserved |
 | Crop | Draw the crop on the frame; the export follows it |
 | Volume | Microphone, system and master levels, with music and voiceover regions |
+| Clean up voice | Takes down hiss, hum and keyboard noise and evens out the level; the original is kept |
 | Music | Six tracks ship with the app, and `~/Music/ScreenPolish` holds your own |
-| Captions | Transcribed locally with whisper.cpp and burned in at export |
+| Captions | Transcribed locally with whisper.cpp and burned in at export, as a box, word-by-word Karaoke, big Bold or Minimal; also saved as `.srt` |
 | Undo and redo | Across every edit, with drags batched sensibly |
-| MP4 and GIF | Up to 2160p at 60 fps, in 16:9, 9:16, 1:1 or the source shape |
+| MP4 and GIF | Up to 2160p at 60 fps, in 16:9, 9:16, 1:1, 4:5, 4:3 or the source shape |
+| GIF choices | 10 to 25 fps, 480 to 1280 px wide, looping or played once |
 
 ## Library and workflow
 
 - Recordings keep their own folder: sources, `events.json`, `project.json` and exports.
 - Sources are never modified; every effect is applied at export.
 - Hover a card to preview with the saved effects, and scrub it.
+- **Open a video** made elsewhere (OBS, a phone, another recorder) and edit it
+  like any take; zooms are added by hand, since it has no click log.
 - The recordings folder is a setting.
 - `record`, `clip` and `export` from the command line, each answering with JSON.
 
@@ -108,6 +117,7 @@ app.
 | Drawn pointer replaces the real one | yes | overlay | captured cursor stays |
 | Click and pointer log | evdev, mouse only | uiohook | uiohook |
 | Offline captions | bundled | bundled, untested | bundled, untested |
+| Updates | rerun the installer | itself, from published releases | download the new build |
 | Recording, editing, effects, export | yes | yes | yes |
 
 ## Limits worth knowing

@@ -1,20 +1,22 @@
 # ScreenPolish
 
 A screen recorder that polishes the take for you. It zooms toward every click,
-smooths the pointer path, and frames the result on a background. No account, no
-upload, no telemetry — the recording never leaves your machine.
+smooths the pointer path, and frames the result on a background. Pick the
+**Studio** look and a first take comes out finished: a bright background, a
+golden Star pointer, gliding zooms with motion blur and word-by-word captions.
+No account, no upload, no telemetry — the recording never leaves your machine.
 
 On Omarchy and other Hyprland desktops it records without the system cursor at
 all, and draws its own instead.
 
-[![Latest release](https://img.shields.io/github/v/release/BkashJEE/screenpolish?label=release)](https://github.com/BkashJEE/screenpolish/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/BkashJEE/ScreenPolish?label=release)](https://github.com/BkashJEE/ScreenPolish/releases/latest)
 [![MIT licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
 **Linux, one command** (Windows and macOS installers are on the
-[releases page](https://github.com/BkashJEE/screenpolish/releases/latest)):
+[releases page](https://github.com/BkashJEE/ScreenPolish/releases/latest)):
 
 ```bash
-curl -fsSL https://github.com/BkashJEE/screenpolish/releases/latest/download/ScreenPolish-installer.run -o screenpolish.run && chmod +x screenpolish.run && ./screenpolish.run
+curl -fsSL https://github.com/BkashJEE/ScreenPolish/releases/latest/download/ScreenPolish-installer.run -o screenpolish.run && chmod +x screenpolish.run && ./screenpolish.run
 ```
 
 **On Omarchy**, add the bar widget to start, stop and watch a recording without
@@ -46,16 +48,28 @@ omarchy plugin add https://github.com/BkashJEE/screenpolish-omarchy-plugin --ena
 - **Records** a screen, a window or a region. On Hyprland that goes through
   `gpu-screen-recorder`: no share dialog, and the system cursor stays out of
   the video entirely.
+- **Dresses the take in one click.** Ready-made looks — **Studio**, **Shorts**
+  (9:16, bold captions) and **Clean** — or save your own and star the one every
+  new recording starts with.
 - **Zooms on clicks**, built from the pointer path and button events recorded
-  with the take, and glides back out.
-- **Draws the pointer**: arrow, hand, dot or bobbing, with click ripples,
-  optional click sounds, and a fade while the pointer rests.
+  with the take, and glides back out, with optional motion blur on every pan
+  and zoom.
+- **Draws the pointer**: a golden **Star** with a trail, a **Halo** ring, or
+  arrow, hand, dot and bobbing, with click ripples, optional click sounds, and
+  a fade while the pointer rests. **Click timing** lines clicks up with the
+  picture if they land late.
 - **Edits without an editor**: trim, split, drop clips, smooth over the cuts,
-  remove silences, change speed, crop.
-- **Captions offline**, with a bundled whisper.cpp — nothing uploaded.
+  remove silences and filler words ("um", "uh"), change speed, crop.
+- **Captions offline**, with a bundled whisper.cpp — nothing uploaded. Four
+  styles, including word-by-word Karaoke and big Bold, and `.srt` export.
+- **Cleans up your voice**: takes down hiss, hum and keyboard noise in the
+  microphone and evens out the level, on your machine. The original is kept.
+- **Edits videos made elsewhere**: open an OBS, phone or other recording and
+  give it the same frame, background, captions and export.
 - **Annotates**: blur or pixelate, arrows, highlight boxes, text and images.
-- **Exports** MP4 or GIF up to 2160p at 60 fps, in 16:9, 9:16, 1:1 or the
-  source shape.
+- **Exports** MP4 or GIF up to 2160p at 60 fps, in 16:9, 9:16, 1:1, 4:5, 4:3
+  or the source shape. GIFs choose their frame rate, width and whether they
+  loop.
 - **Adds intro and outro cards**: a title, a line under it and up to six
   steps that arrive one by one, calm or bold, over the take's own background.
 - **Keeps the last 30 seconds** (Linux): a replay buffer holds the screen in
@@ -91,6 +105,7 @@ Setup for other clients is in [`mcp/README.md`](mcp/README.md).
 | Drawn pointer replaces the real one | yes | overlay | captured cursor stays |
 | Click and pointer log | evdev, mouse only | uiohook | uiohook |
 | Offline captions | bundled | bundled, untested | bundled, untested |
+| Updates | rerun the installer | itself, from published releases | download the new build |
 | Everything else | yes | yes | yes |
 
 Where the system cursor is captured, the drawn pointer styles have nothing to
@@ -100,13 +115,13 @@ video is the real one.
 ## Install
 
 Builds for each platform are on the
-[releases page](https://github.com/BkashJEE/screenpolish/releases).
+[releases page](https://github.com/BkashJEE/ScreenPolish/releases).
 
 **Linux.** One file that checks your system, asks where the app should live,
 and offers to install what is missing:
 
 ```bash
-curl -fsSL https://github.com/BkashJEE/screenpolish/releases/latest/download/ScreenPolish-installer.run -o screenpolish.run
+curl -fsSL https://github.com/BkashJEE/ScreenPolish/releases/latest/download/ScreenPolish-installer.run -o screenpolish.run
 chmod +x screenpolish.run
 ./screenpolish.run
 ```
@@ -116,7 +131,10 @@ else. `./screenpolish.run --uninstall` removes exactly what it installed and
 leaves your recordings alone.
 
 **Windows.** Run the installer and pick where it goes. It is not code signed,
-so SmartScreen will warn you: *More info* → *Run anyway*.
+so SmartScreen will warn you: *More info* → *Run anyway*. After that it updates
+itself: each published release downloads in the background and installs when
+you choose *Restart to update*, or the next time you close the app. It never
+restarts while you are recording or exporting.
 
 **macOS.** Unsigned as well, so macOS quarantines it:
 
@@ -156,7 +174,9 @@ app bundles can be produced elsewhere — unsigned, which macOS will notice.
   default `~/Videos/ScreenPolish`. Nothing else is written.
 - On Linux keyboards are never opened: the pointer path comes from the
   compositor and button presses from a single evdev device.
-- There is no network code in the app.
+- The app sends nothing anywhere. The one network request is the Windows
+  update check, which asks GitHub for the latest published release; set
+  `POLISH_NO_UPDATES=1` to turn it off. Linux and macOS builds make none.
 
 ## Licence
 
