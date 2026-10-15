@@ -47,6 +47,8 @@ export interface KnobsProps {
   children?: ReactNode
   /** Recorded audio, for silence removal. */
   audioUrls?: { mic?: string; system?: string }
+  /** Source seconds of each mouse press, for timing a caption script to the steps. */
+  clickTimes?: number[]
   /** Whether the cleaned-up microphone has been made for this recording. */
   hasCleanMic?: boolean
   /** Make the cleaned-up microphone. */
@@ -982,6 +984,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           folder={files.folder}
           duration={duration}
           sources={[...(props.audioUrls?.mic ? (['mic'] as const) : []), ...(props.audioUrls?.system ? (['system'] as const) : [])]}
+          clicks={props.clickTimes ?? []}
         />
       </Section>
 

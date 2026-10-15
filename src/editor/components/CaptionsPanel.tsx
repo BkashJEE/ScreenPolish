@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Project } from '../../shared/types'
 import { CAPTION_SIZE_RANGE, CAPTIONS_NOT_INSTALLED, DEFAULT_CAPTIONS, DEFAULT_CAPTION_HIGHLIGHT, editCue, normalizeCaptions, type CaptionPosition, type CaptionSettings, type CaptionStyle, type CaptionsStatus } from '../../shared/captions'
 import { projectSrt } from '../lib/captions-srt'
+import { scriptCues, stepTimes, type ScriptTiming } from '../../shared/caption-script'
 import { FILLER_CUT_PREFIX, fillerSummary, findFillers } from '../../shared/fillers'
 import { removeSilences, restoreSilences } from '../../shared/silence'
 import { effectiveTrim } from '../../shared/layout'
@@ -20,7 +21,8 @@ export function CaptionsPanel({
   onProject,
   folder,
   duration,
-  sources
+  sources,
+  clicks = []
 }: {
   project: Project
   onProject: (update: (p: Project) => Project) => void
@@ -28,6 +30,8 @@ export function CaptionsPanel({
   /** Seconds of recording, for timing the .srt to the export. */
   duration: number
   sources: Source[]
+  /** Source seconds of each mouse press. */
+  clicks?: number[]
 }) {
   const captions = normalizeCaptions(project.captions ?? DEFAULT_CAPTIONS)
   const [source, setSource] = useState<Source>(sources[0] ?? 'mic')
@@ -99,26 +103,27 @@ export function CaptionsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [captions.auto, status, folder])
 
-  if (status && !status.installed) {
-    return (
-      <div className="flex flex-col gap-1.5" role="status">
-        <p className="text-[11px] text-fg">{CAPTIONS_NOT_INSTALLED}</p>
-        {status.reason && <p className="text-[11px] text-fg-dim">{status.reason.replace(CAPTIONS_NOT_INSTALLED, '').trim()}</p>}
-        {captions.cues.length > 0 && <p className="text-[11px] text-fg-dim">The {captions.cues.length} lines already in this project still export.</p>}
-      </div>
-    )
-  }
-
-  if (sources.length === 0) {
-    return <p className="text-[11px] text-fg-dim">This recording has no sound, so there is nothing to transcribe. Turn the microphone on in Capture before the next take.</p>
-  }
+  const engineMissing = status !== null && !status.installed
+  // A script needs neither a voice nor the engine, so it is offered whatever this take has.
+  const canTranscribe = !engineMissing && sources.length > 0
 
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-[11px] text-fg-muted">
-        Transcribed on this computer, nothing is uploaded. Fix any word below and the video follows.
-      </p>
-      {sources.length > 1 && (
+      {engineMissing && (
+        <div className="flex flex-col gap-1.5" role="status">
+          <p className="text-[11px] text-fg">{CAPTIONS_NOT_INSTALLED}</p>
+          {status.reason && <p className="text-[11px] text-fg-dim">{status.reason.replace(CAPTIONS_NOT_INSTALLED, '').trim()}</p>}
+        </div>
+      )}
+      {!engineMissing && sources.length === 0 && (
+        <p className="text-[11px] text-fg-dim">This recording has no sound, so there is nothing to transcribe. Write what it shows below, or turn the microphone on in Capture before the next take.</p>
+      )}
+      {canTranscribe && (
+        <p className="text-[11px] text-fg-muted">
+          Transcribed on this computer, nothing is uploaded. Fix any word below and the video follows.
+        </p>
+      )}
+      {canTranscribe && sources.length > 1 && (
         <Segmented<Source>
           size="sm"
           value={source}
@@ -129,13 +134,27 @@ export function CaptionsPanel({
           ]}
         />
       )}
+      {canTranscribe && (
       <div className="flex items-center gap-2">
         <Button size="sm" variant={captions.cues.length ? 'default' : 'primary'} disabled={busy || status === null} icon={busy ? <Spinner size={12} /> : undefined} onClick={() => void run()}>
           {busy ? `Transcribing ${Math.round((progress ?? 0) * 100)}%` : captions.cues.length ? 'Transcribe again' : 'Transcribe'}
         </Button>
         {captions.cues.length > 0 && !busy && <span className="text-[11px] text-fg-dim">replaces your edits</span>}
       </div>
+      )}
       {error && <p className="text-[11px] text-danger">{error}</p>}
+      <ScriptBox
+        key={folder}
+        captions={captions}
+        clicks={clicks}
+        range={effectiveTrim(project, duration)}
+        open={!canTranscribe || !!captions.script}
+        disabled={busy || duration <= 0}
+        onMake={(script, timing, cues) => {
+          setError(null)
+          patch({ cues, enabled: true, script, scriptTiming: timing })
+        }}
+      />
 
       {captions.cues.length > 0 && (
         <>
@@ -260,5 +279,73 @@ function FillerRow({ project, onProject, duration }: { project: Project; onProje
         </Button>
       )}
     </div>
+  )
+}
+
+/**
+ * Captions from a script: write or paste what the take shows, one caption per
+ * line, and it is timed to the clicks or spread over the take. The script is
+ * kept with the project, so it can be changed and made again.
+ */
+function ScriptBox({
+  captions,
+  clicks,
+  range,
+  open,
+  disabled,
+  onMake
+}: {
+  captions: CaptionSettings
+  clicks: number[]
+  range: { start: number; end: number }
+  open: boolean
+  disabled: boolean
+  onMake: (script: string, timing: ScriptTiming, cues: CaptionSettings['cues']) => void
+}) {
+  const steps = stepTimes(clicks, range).length
+  const [text, setText] = useState(captions.script ?? '')
+  // Until chosen, follow the take: the length (and so its steps) can arrive after this mounts.
+  const [chosen, setTiming] = useState<ScriptTiming | null>(captions.scriptTiming ?? null)
+  const timing: ScriptTiming = chosen ?? (steps > 0 ? 'clicks' : 'even')
+  const lines = text.split(/\r?\n/).filter((l) => l.trim()).length
+  const make = () => {
+    const cues = scriptCues(text, range, timing, clicks, `script-${Date.now().toString(36)}`)
+    if (cues.length) onMake(text, timing, cues)
+  }
+  return (
+    <details className="group flex flex-col gap-2 rounded-[8px] border border-line-strong px-2.5 py-2" open={open}>
+      <summary className="cursor-pointer select-none text-[12px] text-fg">Captions from a script</summary>
+      <div className="mt-2 flex flex-col gap-2">
+        <p className="text-[11px] leading-[1.4] text-fg-muted">One caption per line. Long lines are split where a sentence ends.</p>
+        <textarea
+          aria-label="Caption script"
+          className="min-h-[96px] resize-y rounded-[7px] border border-line-strong bg-bg-1 px-2 py-1.5 text-[12px] leading-[1.4] text-fg focus:border-accent"
+          style={{ userSelect: 'text' }}
+          rows={5}
+          placeholder={'Open Footprint\nPick the profile to check\nThe biggest folders are on the left'}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
+        />
+        <Row label="Timing" hint={timing === 'clicks' ? (steps ? `Each line starts at a click; ${steps} ${steps === 1 ? 'step' : 'steps'} in this take.` : 'No clicks in this take, so the lines are spread evenly.') : 'Spread evenly over the take.'}>
+          <Segmented<ScriptTiming>
+            full={false}
+            size="sm"
+            value={timing}
+            onChange={setTiming}
+            options={[
+              { value: 'clicks', label: 'At clicks', title: 'Each line starts at a click' },
+              { value: 'even', label: 'Evenly', title: 'Lines spread evenly over the take' }
+            ]}
+          />
+        </Row>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant={captions.cues.length ? 'default' : 'primary'} disabled={disabled || lines === 0} onClick={make}>
+            {captions.script ? 'Make captions again' : 'Make captions'}
+          </Button>
+          {captions.cues.length > 0 && <span className="text-[11px] text-fg-dim">replaces the captions</span>}
+        </div>
+      </div>
+    </details>
   )
 }
