@@ -133,7 +133,7 @@ export interface LoadedProject {
   events: RecordingEvents
   project: Project
   /** Media URLs on the polish:// protocol, usable in <video src> and fetch with Range. */
-  urls: { screen: string; mic?: string; system?: string; webcam?: string }
+  urls: { screen: string; mic?: string; micClean?: string; system?: string; webcam?: string }
 }
 
 export const EDITOR = {
@@ -162,6 +162,7 @@ export const EDITOR = {
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
   saveCaptions: 'polish:captions:save-srt',
+  cleanMic: 'polish:audio:clean-mic',
   listLooks: 'polish:looks:list',
   saveLook: 'polish:looks:save',
   deleteLook: 'polish:looks:delete',
@@ -338,6 +339,8 @@ export interface EditorBridge {
   deleteLook: (id: string) => Promise<import('./presets').LookShelf>
   /** The look every new recording starts with; null for the app's defaults. */
   setDefaultLook: (id: string | null) => Promise<import('./presets').LookShelf>
+  /** Make the cleaned-up microphone for a recording; resolves with its media URL. */
+  cleanMic: (folder: string) => Promise<string>
   /** Write captions as <folder>/exports/<name>.srt; resolves with the file's path. */
   saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */

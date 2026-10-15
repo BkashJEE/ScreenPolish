@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { withCleanVoice } from '../lib/voice'
 import { syncEvents } from '../../shared/input-sync'
 import { canSplitAt, clipsFrom, keptDuration, removeClip, restoreClip, splitAt } from '../../shared/cuts'
 import { clipSpeed, setClipSpeed, speedSpans } from '../../shared/speed'
@@ -122,6 +123,10 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
   const { project, setProject, undo, redo, canUndo, canRedo, beginBatch, endBatch } = useProjectHistory(loaded.project)
   // Click timing moves the whole input log against the picture; everything below uses the moved log.
   const events = useMemo(() => syncEvents(recordedEvents, project.cursor.syncSec), [recordedEvents, project.cursor.syncSec])
+  // Clean up voice swaps the microphone for its cleaned copy everywhere it is played or exported.
+  const [cleanMicUrl, setCleanMicUrl] = useState(urls.micClean)
+  const media = useMemo(() => withCleanVoice(project, urls, cleanMicUrl), [project, urls, cleanMicUrl])
+  const mediaLoaded = useMemo(() => ({ ...loaded, urls: media }), [loaded, media])
   const [duration, setDuration] = useState<number>(NaN)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -445,7 +450,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
           <div className="editor-stage-shell relative min-h-0 flex-1 bg-bg-0">
             <div className="absolute inset-6">
               <Preview
-                urls={urls}
+                urls={media}
                 events={events}
                 project={project}
                 segments={segments}
@@ -517,7 +522,9 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
             project={project}
             onProject={onProject}
             files={files}
-            audioUrls={{ mic: urls.mic, system: urls.system }}
+            audioUrls={{ mic: media.mic, system: media.system }}
+            hasCleanMic={!!cleanMicUrl}
+            onCleanMic={async () => setCleanMicUrl(await window.polish.cleanMic(files.folder))}
             outSize={outSize}
             region={events.region}
             duration={duration}
@@ -547,7 +554,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
       <ExportSheet
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        loaded={loaded}
+        loaded={mediaLoaded}
         project={project}
         onProject={onProject}
         duration={duration}
@@ -559,7 +566,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
       <ThumbnailSheet
         open={thumbnailOpen}
         onClose={() => setThumbnailOpen(false)}
-        loaded={loaded}
+        loaded={mediaLoaded}
         project={project}
         duration={duration}
         time={time}

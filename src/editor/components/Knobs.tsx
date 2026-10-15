@@ -47,6 +47,10 @@ export interface KnobsProps {
   children?: ReactNode
   /** Recorded audio, for silence removal. */
   audioUrls?: { mic?: string; system?: string }
+  /** Whether the cleaned-up microphone has been made for this recording. */
+  hasCleanMic?: boolean
+  /** Make the cleaned-up microphone. */
+  onCleanMic?: () => Promise<void>
 }
 
 const TAB_CSS = inspectorTabCss()
@@ -119,6 +123,36 @@ function FolderBackgrounds({ selected, onPick }: { selected: string | undefined;
         images && <p className="text-[11.5px] leading-[1.45] text-fg-dim">Put pictures in Pictures/ScreenPolish and they appear here.</p>
       )}
     </div>
+  )
+}
+
+/**
+ * Clean up voice: the first time it is switched on, the cleaned microphone is
+ * made (a few seconds per minute of audio); after that it is a plain switch.
+ */
+function VoiceCleanup({ on, made, make, onChange }: { on: boolean; made: boolean; make: () => Promise<void>; onChange: (on: boolean) => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <>
+      <Row label="Clean up voice" hint={busy ? 'Cleaning up the microphone…' : 'Takes down hiss, hum and keyboard noise and evens out the level. Made on this computer; the original is kept.'}>
+        <Toggle
+          checked={on}
+          disabled={busy}
+          label="Clean up voice"
+          onChange={(next) => {
+            setError(null)
+            if (!next || made) return onChange(next)
+            setBusy(true)
+            make()
+              .then(() => onChange(true))
+              .catch((e: unknown) => setError((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))
+              .finally(() => setBusy(false))
+          }}
+        />
+      </Row>
+      {error && <p className="text-[11px] text-danger">{error}</p>}
+    </>
   )
 }
 
@@ -972,6 +1006,14 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         </Row>
         {files.mic && project.audio.mic && (
           <SliderField label="Mic volume" value={project.audio.micVolume} min={0} max={1} step={0.01} onChange={(micVolume) => set('audio', { micVolume })} format={pct} />
+        )}
+        {files.mic && project.audio.mic && props.onCleanMic && (
+          <VoiceCleanup
+            on={project.audio.micClean === true}
+            made={props.hasCleanMic === true}
+            make={props.onCleanMic}
+            onChange={(micClean) => set('audio', { micClean })}
+          />
         )}
         <Row label="System audio" hint={files.system ? undefined : 'Not recorded'} disabled={!files.system}>
           <Toggle checked={project.audio.system} disabled={!files.system} onChange={(system) => set('audio', { system })} label="System audio" />

@@ -241,7 +241,7 @@ export interface Project {
     /** 0..1 strength of the drop shadow; absent = 1. */
     shadow?: number
   }
-  audio: { mic: boolean; system: boolean; micVolume: number; systemVolume: number; masterVolume: number; /** Legacy on/off from early window-tracking builds; migrated into cursor.clickSound. */ clickSounds?: boolean }
+  audio: { mic: boolean; system: boolean; micVolume: number; systemVolume: number; masterVolume: number; /** Play and export the cleaned-up microphone (mic.clean.m4a) instead of the original. */ micClean?: boolean; /** Legacy on/off from early window-tracking builds; migrated into cursor.clickSound. */ clickSounds?: boolean }
   overlays: Overlay[]
   /** Animated cards before and after the recording. See shared/scenes.ts. */
   scenes: Scene[]
@@ -287,6 +287,8 @@ export interface RecordingFiles {
   folder: string
   screen: string
   mic?: string
+  /** The cleaned-up microphone, once made. */
+  micClean?: string
   system?: string
   webcam?: string
   events: string

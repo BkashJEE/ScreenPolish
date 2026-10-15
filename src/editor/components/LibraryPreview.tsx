@@ -4,6 +4,7 @@ import type { RecordingSummary } from '../../shared/types'
 import { resolveZoomSegments } from '../../shared/zoom-planner'
 import { pointerPathFor } from '../../shared/pointer'
 import { syncEvents } from '../../shared/input-sync'
+import { withCleanVoice } from '../lib/voice'
 import { imageUrlForPath, normalizeProject, normalizeClickSound, normalizeZoomSound } from '../lib/project'
 import { loadImage, loadOverlayImages } from '../lib/media'
 import { previewSeekTime } from '../lib/hover-preview'
@@ -70,7 +71,7 @@ function ComposedPreview({ item, scrub }: { item: RecordingSummary; scrub: numbe
 
   return <div className="h-[min(60vh,600px)] bg-black">
     {error ? <div className="p-6 text-sm text-fg-muted">Could not preview saved effects. Open the recording to inspect it.</div> : loaded ?
-      <Preview hideControls urls={loaded.urls} events={events ?? loaded.events} project={loaded.project}
+      <Preview hideControls urls={withCleanVoice(loaded.project, loaded.urls)} events={events ?? loaded.events} project={loaded.project}
         segments={segments} pointerPath={pointer} backgroundImage={background} overlayImages={images}
         selectedOverlayId={null} duration={duration} time={time} playing={playing && duration > 0}
         trim={trim} onTime={setTime} onPlayingChange={setPlaying} onDuration={setDuration}

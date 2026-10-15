@@ -23,6 +23,7 @@ import { ensureShelf, listTracks } from './music-library'
 import { ensureBackgroundsFolder, listBackgrounds } from './background-library'
 import { IMPORT_EXTENSIONS, importVideo } from './import-video'
 import { deleteLookIn, loadShelf, saveLookIn, setDefaultLookIn } from './looks'
+import { CLEAN_MIC_FILE, cleanMic } from './voice-cleanup'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
 import { mergeProject, serializeProject } from './project-io'
@@ -57,6 +58,7 @@ export interface EditorIpcDeps {
 
 const OPTIONAL_FILES = [
   ['mic', 'mic.mp4'],
+  ['micClean', CLEAN_MIC_FILE],
   ['system', 'system.mp4'],
   ['webcam', 'webcam.mp4']
 ] as const
@@ -356,6 +358,12 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
     const target = path.join(exportsDir, uniqueName(existing, sanitizeBaseName(request.name), request.format))
     await fs.promises.writeFile(target, buf)
     return { path: target }
+  })
+
+  ipcMain.handle(EDITOR.cleanMic, async (_e, folder: string) => {
+    const dir = assertInsideRoot(deps.root(), folder)
+    await cleanMic(deps.ffmpegPath(), dir)
+    return mediaUrl(dir, CLEAN_MIC_FILE)
   })
 
   ipcMain.handle(EDITOR.listLooks, () => loadShelf(app.getPath('userData')))
