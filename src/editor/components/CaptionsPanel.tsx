@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Project } from '../../shared/types'
 import { CAPTION_SIZE_RANGE, CAPTIONS_NOT_INSTALLED, DEFAULT_CAPTIONS, DEFAULT_CAPTION_HIGHLIGHT, editCue, normalizeCaptions, type CaptionPosition, type CaptionSettings, type CaptionStyle, type CaptionsStatus } from '../../shared/captions'
 import { projectSrt } from '../lib/captions-srt'
@@ -64,8 +64,40 @@ export function CaptionsPanel({
     }
   }, [])
 
+  // `auto` goes in the same edit as the result, so one undo takes both back.
   const patch = (update: Partial<CaptionSettings>) =>
-    onProject((p) => ({ ...p, captions: { ...normalizeCaptions(p.captions), ...update } }))
+    onProject((p) => {
+      const { auto: _auto, ...rest } = normalizeCaptions(p.captions)
+      return { ...p, captions: { ...rest, ...update } }
+    })
+
+  const run = async (from: Source = source, auto = false) => {
+    setError(null)
+    setProgress(0)
+    try {
+      const cues = await window.polish.transcribe(folder, from)
+      if (cues.length === 0) {
+        setError(auto ? 'Tried to make captions by themselves, but no speech was found in the microphone.' : 'No speech was found in that track.')
+        if (auto) patch({})
+      } else patch({ cues, enabled: true })
+    } catch (e) {
+      // Electron prefixes errors thrown in main; the user only needs the reason.
+      setError((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+      if (auto) patch({})
+    } finally {
+      setProgress(null)
+    }
+  }
+
+  // A take recorded under a look with captions transcribes its microphone once, when first opened.
+  const autoTried = useRef<string | null>(null)
+  useEffect(() => {
+    if (!captions.auto || busy || !status || autoTried.current === folder) return
+    autoTried.current = folder
+    // Without a microphone or the engine there is nothing to try; the flag stays, unused, rather than adding an edit nobody made.
+    if (status.installed && sources.includes('mic') && captions.cues.length === 0) void run('mic', true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captions.auto, status, folder])
 
   if (status && !status.installed) {
     return (
@@ -78,22 +110,7 @@ export function CaptionsPanel({
   }
 
   if (sources.length === 0) {
-    return <p className="text-[11px] text-fg-dim">This recording has no audio track, so there is nothing to transcribe.</p>
-  }
-
-  const run = async () => {
-    setError(null)
-    setProgress(0)
-    try {
-      const cues = await window.polish.transcribe(folder, source)
-      if (cues.length === 0) setError('No speech was found in that track.')
-      else patch({ cues, enabled: true })
-    } catch (e) {
-      // Electron prefixes errors thrown in main; the user only needs the reason.
-      setError((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
-    } finally {
-      setProgress(null)
-    }
+    return <p className="text-[11px] text-fg-dim">This recording has no sound, so there is nothing to transcribe. Turn the microphone on in Capture before the next take.</p>
   }
 
   return (

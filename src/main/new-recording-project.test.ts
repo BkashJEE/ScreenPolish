@@ -3,6 +3,8 @@ import { DEFAULT_PROJECT } from '@shared/types'
 import { newRecordingProject } from './new-recording-project'
 import { CURSOR_SKINS } from '@shared/ipc'
 import { mergeProject } from './project-io'
+import { builtinLook } from '@shared/builtin-looks'
+import { lookFromProject } from '@shared/presets'
 
 describe('new recording project', () => {
   it('turns click sounds on for new recordings and keeps the recorded fps and cursor skin', () => {
@@ -68,5 +70,20 @@ describe('the Agent pointer', () => {
     for (const skin of CURSOR_SKINS) expect(newRecordingProject({ title: '', fps: 30, cursorSkin: skin }).cursor.style).toBe(skin)
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'unknown' }).cursor.style).toBe('arrow')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'hand' }).cursor.style).toBe('hand')
+  })
+})
+
+describe('a take started under a look', () => {
+  it('asks for captions by itself when the look styles them, and keeps asking after a reload', () => {
+    const p = newRecordingProject({ title: '', fps: 60, cursorSkin: 'arrow', style: builtinLook('builtin:studio')!.look })
+    expect(p.captions).toMatchObject({ auto: true, enabled: false, cues: [], style: 'karaoke' })
+    expect(p.output.fps).toBe(60)
+    expect(mergeProject(JSON.parse(JSON.stringify(p))).captions?.auto).toBe(true)
+  })
+
+  it('does not when the look leaves captions plain, or there is no look', () => {
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow' }).captions?.auto).toBeUndefined()
+    const plain = { ...DEFAULT_PROJECT, captions: { ...DEFAULT_PROJECT.captions!, style: undefined } }
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', style: lookFromProject(plain) }).captions?.auto).toBeUndefined()
   })
 })

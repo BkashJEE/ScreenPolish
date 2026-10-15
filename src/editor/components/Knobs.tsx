@@ -289,7 +289,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         {INSPECTOR_TABS.map((tab) => <button key={tab.id} type="button" aria-pressed={panel === tab.id} onClick={() => setPanel(tab.id)}>{tab.label}</button>)}
       </nav>
       <Section title="Looks">
-        <LooksPanel project={project} onProject={onProject} />
+        <LooksPanel project={project} onProject={onProject} hasMic={!!files.mic} />
       </Section>
       <Section title="Editor feel" defaultOpen={false}>
         <Row label="Playful sliders" hint="Elastic drag and spring-back; editor only">

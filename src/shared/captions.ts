@@ -57,6 +57,12 @@ export interface CaptionSettings {
   style?: CaptionStyle
   /** Colour of the word being said, a hex colour. */
   highlight?: string
+  /**
+   * Transcribe the microphone by itself the first time the editor opens this
+   * take. Set on new takes whose starting look styles captions; cleared once
+   * tried, whatever the outcome.
+   */
+  auto?: boolean
 }
 
 export const DEFAULT_CAPTIONS: CaptionSettings = { enabled: false, cues: [], size: 1, position: 'bottom' }
@@ -87,7 +93,7 @@ export function normalizeCaptions(value: unknown): CaptionSettings {
   const size = finite(raw.size) ? Math.min(CAPTION_SIZE_RANGE.max, Math.max(CAPTION_SIZE_RANGE.min, raw.size)) : DEFAULT_CAPTIONS.size
   const style = CAPTION_STYLES.includes(raw.style as CaptionStyle) ? (raw.style as CaptionStyle) : undefined
   const highlight = typeof raw.highlight === 'string' && /^#[0-9a-f]{6}$/i.test(raw.highlight) ? raw.highlight : undefined
-  return { enabled: raw.enabled === true, cues, size, position: raw.position === 'top' ? 'top' : 'bottom', ...(style ? { style } : {}), ...(highlight ? { highlight } : {}) }
+  return { enabled: raw.enabled === true, cues, size, position: raw.position === 'top' ? 'top' : 'bottom', ...(style ? { style } : {}), ...(highlight ? { highlight } : {}), ...(raw.auto === true ? { auto: true } : {}) }
 }
 
 /**

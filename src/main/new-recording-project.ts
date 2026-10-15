@@ -32,7 +32,9 @@ export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorS
     // New recordings tick on every mouse press, and glide fast pointer moves; both per project under Cursor.
     cursor: { ...DEFAULT_PROJECT.cursor, style: pointer, glide: 0.5, clickSound: { ...DEFAULT_CLICK_SOUND, enabled: true } }
   }
-  const styled = args.style ? applyLook(base, args.style) : base
+  const looked = args.style ? applyLook(base, args.style) : base
+  // A look that styles captions wants them: the editor transcribes the take the first time it opens it.
+  const styled = args.style?.captions.style && looked.captions ? { ...looked, captions: { ...looked.captions, auto: true } } : looked
   return {
     ...styled,
     // A planned take is named by its intro card rather than the window it caught.
