@@ -81,6 +81,11 @@ export interface ExportBeginRequest {
   kind: ExportKind
   /** Base file name without extension. */
   name: string
+  /**
+   * Write into this folder instead of the recording's exports folder. Must be
+   * inside the recordings root; a sequence renders its clips here.
+   */
+  into?: string
 }
 
 export interface ExportBeginResponse {
