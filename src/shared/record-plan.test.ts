@@ -121,6 +121,12 @@ describe('planned captions', () => {
     expect(look.captions).toEqual(['Show the library', 'Open the export sheet'])
     expect(normalizeTakeLook(JSON.parse(JSON.stringify(look)))?.captions).toEqual(['Show the library', 'Open the export sheet'])
     expect(takeLookOf(normalizePlan(good)!).captions).toBeUndefined()
+    // The steps go too, shot by shot with their captions, for the recording guide.
+    expect(look.steps?.map((s) => [s.action, s.caption])).toEqual([
+      ['Show the library', 'Show the library'],
+      ['Open the export sheet', 'Open the export sheet']
+    ])
+    expect(normalizeTakeLook(JSON.parse(JSON.stringify(look)))?.steps).toEqual(look.steps)
   })
 
   it('are asked for in the prompt', () => {

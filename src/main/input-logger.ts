@@ -48,8 +48,30 @@ export class InputLogger {
   private trackedMonitors: HyprMonitor[] = []
   private windowAddress: string | undefined
 
+  /** Told of every press inside the recording, with its time on the recording clock (the recording guide moves on). */
+  onPress: ((tMs: number) => void) | null = null
+
   get running(): boolean {
     return this.events !== null
+  }
+
+  /** Mark that a guided step began now; returns its time on the recording clock, or null while paused or stopped. */
+  markStep(): number | null {
+    const ev = this.events
+    const t = this.now()
+    if (!ev || t === null) return null
+    ev.steps = [...(ev.steps ?? []), t]
+    return t
+  }
+
+  /** Take back the last step mark (the guide's Back button). */
+  unmarkStep(): void {
+    if (this.events?.steps?.length) this.events.steps = this.events.steps.slice(0, -1)
+  }
+
+  /** Time on the recording clock now, or null while paused or stopped. */
+  get clockMs(): number | null {
+    return this.events ? this.now() : null
   }
 
   /** Records why the log is short, so the editor can explain an empty take rather than guess. */
@@ -202,6 +224,7 @@ export class InputLogger {
     if (!point) return
     const [x, y] = point
     ev.clicks.push({ t, x, y, button, down })
+    if (down) this.onPress?.(t)
   }
 
   private recordWheel(sx: number, sy: number, dy: number): void {

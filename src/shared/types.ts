@@ -44,6 +44,8 @@ export interface RecordingEvents {
    * instead of rendering an empty polish that looks like a bug.
    */
   inputNote?: string
+  /** A guided take: ms at which steps 2, 3, … began, marked by the recording guide. Captions planned per step are timed to these. */
+  steps?: number[]
 }
 
 /** How the camera moves during a segment. `zoom` is the plain push-in; tilts add fake perspective; drift is a slow dolly; punch snaps in. */

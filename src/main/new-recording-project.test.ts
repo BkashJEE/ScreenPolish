@@ -57,6 +57,12 @@ describe('a planned take', () => {
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look }).captions?.script).toBeUndefined()
   })
 
+  it('with steps, gets one script line per step, timed to the steps the guide marks', () => {
+    const steps = [{ action: 'Open Footprint', caption: 'Open Footprint' }, { action: 'Scroll down' }, { action: 'Press Review', caption: 'Review first' }]
+    const p = newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look: { ...look, captions: ['Open Footprint', 'Review first'], steps } })
+    expect(p.captions).toMatchObject({ auto: true, script: 'Open Footprint\n\nReview first', scriptTiming: 'steps' })
+  })
+
   it('is an ordinary take without a plan', () => {
     const p = newRecordingProject({ title: 'Firefox', fps: 30, cursorSkin: 'hand', look: null })
     expect(p.scenes).toEqual([])

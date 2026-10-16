@@ -22,7 +22,8 @@ export function CaptionsPanel({
   folder,
   duration,
   sources,
-  clicks = []
+  clicks = [],
+  stepMarks
 }: {
   project: Project
   onProject: (update: (p: Project) => Project) => void
@@ -32,6 +33,8 @@ export function CaptionsPanel({
   sources: Source[]
   /** Source seconds of each mouse press. */
   clicks?: number[]
+  /** Source seconds at which each step of a guided take began; absent when the take had no guide. */
+  stepMarks?: number[]
 }) {
   const captions = normalizeCaptions(project.captions ?? DEFAULT_CAPTIONS)
   const [source, setSource] = useState<Source>(sources[0] ?? 'mic')
@@ -99,11 +102,12 @@ export function CaptionsPanel({
   useEffect(() => {
     if (!captions.auto || busy || !status || autoTried.current === folder || captions.cues.length > 0) return
     const voice = status.installed && sources.includes('mic')
-    if (!voice && captions.script) {
+    // A guided take keeps its planned lines even with a voice; Transcribe is still there.
+    if ((!voice || captions.scriptTiming === 'steps') && captions.script) {
       // The take's length arrives after the project; the script is timed against it.
       if (duration <= 0) return
       autoTried.current = folder
-      const cues = scriptCues(captions.script, effectiveTrim(project, duration), captions.scriptTiming ?? 'clicks', clicks, `script-${Date.now().toString(36)}`)
+      const cues = scriptCues(captions.script, effectiveTrim(project, duration), captions.scriptTiming ?? 'clicks', clicks, `script-${Date.now().toString(36)}`, stepMarks)
       if (cues.length) patch({ cues, enabled: true })
       return
     }
@@ -157,6 +161,7 @@ export function CaptionsPanel({
         key={folder}
         captions={captions}
         clicks={clicks}
+        stepMarks={stepMarks}
         range={effectiveTrim(project, duration)}
         open={!canTranscribe || !!captions.script}
         disabled={busy || duration <= 0}
@@ -300,6 +305,7 @@ function FillerRow({ project, onProject, duration }: { project: Project; onProje
 function ScriptBox({
   captions,
   clicks,
+  stepMarks,
   range,
   open,
   disabled,
@@ -307,6 +313,7 @@ function ScriptBox({
 }: {
   captions: CaptionSettings
   clicks: number[]
+  stepMarks?: number[]
   range: { start: number; end: number }
   open: boolean
   disabled: boolean
@@ -316,10 +323,10 @@ function ScriptBox({
   const [text, setText] = useState(captions.script ?? '')
   // Until chosen, follow the take: the length (and so its steps) can arrive after this mounts.
   const [chosen, setTiming] = useState<ScriptTiming | null>(captions.scriptTiming ?? null)
-  const timing: ScriptTiming = chosen ?? (steps > 0 ? 'clicks' : 'even')
+  const timing: ScriptTiming = chosen ?? (stepMarks ? 'steps' : steps > 0 ? 'clicks' : 'even')
   const lines = text.split(/\r?\n/).filter((l) => l.trim()).length
   const make = () => {
-    const cues = scriptCues(text, range, timing, clicks, `script-${Date.now().toString(36)}`)
+    const cues = scriptCues(text, range, timing, clicks, `script-${Date.now().toString(36)}`, stepMarks)
     if (cues.length) onMake(text, timing, cues)
   }
   return (
@@ -337,13 +344,14 @@ function ScriptBox({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.stopPropagation()}
         />
-        <Row label="Timing" hint={timing === 'clicks' ? (steps ? `Each line starts at a click; ${steps} ${steps === 1 ? 'step' : 'steps'} in this take.` : 'No clicks in this take, so the lines are spread evenly.') : 'Spread evenly over the take.'}>
+        <Row label="Timing" hint={timing === 'steps' ? 'Line N starts when step N began while recording; a blank line is a step without a caption.' : timing === 'clicks' ? (steps ? `Each line starts at a click; ${steps} ${steps === 1 ? 'step' : 'steps'} in this take.` : 'No clicks in this take, so the lines are spread evenly.') : 'Spread evenly over the take.'}>
           <Segmented<ScriptTiming>
             full={false}
             size="sm"
             value={timing}
             onChange={setTiming}
             options={[
+              ...(stepMarks ? [{ value: 'steps' as const, label: 'At steps', title: 'Line N starts when step N of the recording guide began' }] : []),
               { value: 'clicks', label: 'At clicks', title: 'Each line starts at a click' },
               { value: 'even', label: 'Evenly', title: 'Lines spread evenly over the take' }
             ]}

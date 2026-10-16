@@ -10,6 +10,7 @@
  * Pure, so the prompt and the parsing are tested without an agent.
  */
 
+import { guideSteps, normalizeGuideSteps, type GuideStep } from './recording-guide'
 import { normalizeScenes, type Scene } from './scenes'
 
 export type PlanSourceKind = 'screen' | 'window' | 'region'
@@ -215,6 +216,8 @@ export interface PlanTakeLook {
   scenes: Scene[]
   /** Caption lines for the take, timed to its clicks when the editor first opens it. */
   captions?: string[]
+  /** The shot list with its captions, step by step, for the recording guide. */
+  steps?: GuideStep[]
   background?: [string, string]
   aspect?: PlanAspect
 }
@@ -223,6 +226,7 @@ export function takeLookOf(plan: RecordPlan): PlanTakeLook {
   return {
     scenes: plan.scenes,
     ...(plan.captions.length ? { captions: plan.captions } : {}),
+    ...(plan.shots.length || plan.captions.length ? { steps: guideSteps(plan.shots, plan.captions) } : {}),
     ...(plan.look.background ? { background: plan.look.background } : {}),
     ...(plan.look.aspect ? { aspect: plan.look.aspect } : {})
   }
@@ -235,7 +239,9 @@ export function normalizeTakeLook(raw: unknown): PlanTakeLook | null {
   const bg = Array.isArray(r.background) ? r.background.filter((c): c is string => typeof c === 'string' && HEX.test(c)) : []
   const aspect = oneOf(r.aspect, ['16:9', '9:16', '1:1', '4:5', '4:3'] as const)
   const captions = (Array.isArray(r.captions) ? r.captions : []).map((c) => text(c, 120)).filter(Boolean).slice(0, PLAN_MAX_CAPTIONS)
+  const steps = normalizeGuideSteps(r.steps)
   return {
+    ...(steps.length ? { steps } : {}),
     scenes: normalizeScenes(r.scenes).slice(0, 2),
     ...(captions.length ? { captions } : {}),
     ...(bg.length >= 2 ? { background: [bg[0]!, bg[1]!] as [string, string] } : {}),

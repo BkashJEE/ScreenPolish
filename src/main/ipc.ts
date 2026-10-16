@@ -321,6 +321,16 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
 
   // Listing the folder does not create it: only opening it does, so the app
   // never leaves an empty folder in Pictures for someone who never asked.
+  // The recording guide: where it is, and its Next and Back buttons.
+  ipcMain.handle(EDITOR.guideState, () => session.guideView)
+  ipcMain.handle(EDITOR.guideMove, (_e, move: unknown) => {
+    if (move === 'next' || move === 'back') session.moveGuide(move)
+  })
+  session.onGuideChange((view) => {
+    const win = deps.getEditorWindow()
+    if (win && !win.isDestroyed()) win.webContents.send(EDITOR.guideChanged, view)
+  })
+
   ipcMain.handle(EDITOR.importVideo, async (event: IpcMainInvokeEvent) => {
     const parent = BrowserWindow.fromWebContents(event.sender) ?? deps.getEditorWindow() ?? undefined
     const result = await dialog.showOpenDialog(parent as BrowserWindow, {

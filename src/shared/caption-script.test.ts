@@ -66,3 +66,19 @@ describe('captions from a script', () => {
     expect(scriptCues('  \n ', range, 'even')).toEqual([])
   })
 })
+
+describe('captions timed to a guided take', () => {
+  it('start line N when step N began, unsplit, skipping blanks and steps never reached', () => {
+    const script = 'Open Footprint\n\nReview what could be cleaned\nNever reached'
+    const cues = scriptCues(script, { start: 2, end: 60 }, 'steps', [], 's', [10, 25])
+    expect(cues.map((c) => [c.start, c.text])).toEqual([
+      [2, 'Open Footprint'],
+      [25, 'Review what could be cleaned']
+    ])
+    expect(cues[0]!.end).toBeLessThanOrEqual(9.95)
+  })
+
+  it('fall back to clicks when the take has no marks', () => {
+    expect(scriptCues('a\nb', range, 'steps', [5, 30])).toEqual(scriptCues('a\nb', range, 'clicks', [5, 30]))
+  })
+})

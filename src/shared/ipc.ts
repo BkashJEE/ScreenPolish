@@ -128,6 +128,14 @@ export interface SetCoverRequest {
   data: ArrayBuffer
 }
 
+/** What the recording guide shows while a planned take records. */
+export interface GuideView {
+  steps: import('./recording-guide').GuideStep[]
+  index: number
+  /** False when the whole screen is recorded, where anything shown would be in the video. */
+  onScreen: boolean
+}
+
 export interface LoadedProject {
   files: RecordingFiles
   events: RecordingEvents
@@ -161,6 +169,10 @@ export const EDITOR = {
   openMusicFolder: 'polish:music:open-folder',
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
+  guideState: 'polish:guide:state',
+  guideMove: 'polish:guide:move',
+  /** main -> editor push while a guided take records */
+  guideChanged: 'polish:guide:changed',
   saveCaptions: 'polish:captions:save-srt',
   cleanMic: 'polish:audio:clean-mic',
   updateState: 'polish:update:state',
@@ -358,6 +370,12 @@ export interface EditorBridge {
   saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
   importVideo: () => Promise<string | null>
+  /** The recording guide of the take being recorded, or null. */
+  guideState: () => Promise<GuideView | null>
+  /** The guide's Next and Back buttons. */
+  guideMove: (move: 'next' | 'back') => Promise<void>
+  /** Called when the guide changes (null when the take ends); returns an unsubscribe. */
+  onGuideChanged: (handler: (view: GuideView | null) => void) => () => void
   /** Pictures in your backgrounds folder, ready to use as a background. */
   listBackgrounds: () => Promise<FolderBackground[]>
   /** Open the backgrounds folder in the file manager, creating it if needed. */

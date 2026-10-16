@@ -65,8 +65,8 @@ export interface CaptionSettings {
   auto?: boolean
   /** The script the captions were last made from, kept so it can be edited and made again. */
   script?: string
-  /** How that script was timed. */
-  scriptTiming?: 'clicks' | 'even'
+  /** How that script was timed (see caption-script.ts). */
+  scriptTiming?: 'clicks' | 'even' | 'steps'
 }
 
 export const DEFAULT_CAPTIONS: CaptionSettings = { enabled: false, cues: [], size: 1, position: 'bottom' }
@@ -97,7 +97,7 @@ export function normalizeCaptions(value: unknown): CaptionSettings {
   const size = finite(raw.size) ? Math.min(CAPTION_SIZE_RANGE.max, Math.max(CAPTION_SIZE_RANGE.min, raw.size)) : DEFAULT_CAPTIONS.size
   const style = CAPTION_STYLES.includes(raw.style as CaptionStyle) ? (raw.style as CaptionStyle) : undefined
   const highlight = typeof raw.highlight === 'string' && /^#[0-9a-f]{6}$/i.test(raw.highlight) ? raw.highlight : undefined
-  return { enabled: raw.enabled === true, cues, size, position: raw.position === 'top' ? 'top' : 'bottom', ...(style ? { style } : {}), ...(highlight ? { highlight } : {}), ...(raw.auto === true ? { auto: true } : {}), ...(typeof raw.script === 'string' && raw.script ? { script: raw.script.slice(0, 20_000) } : {}), ...(raw.scriptTiming === 'clicks' || raw.scriptTiming === 'even' ? { scriptTiming: raw.scriptTiming } : {}) }
+  return { enabled: raw.enabled === true, cues, size, position: raw.position === 'top' ? 'top' : 'bottom', ...(style ? { style } : {}), ...(highlight ? { highlight } : {}), ...(raw.auto === true ? { auto: true } : {}), ...(typeof raw.script === 'string' && raw.script ? { script: raw.script.slice(0, 20_000) } : {}), ...(raw.scriptTiming === 'clicks' || raw.scriptTiming === 'even' || raw.scriptTiming === 'steps' ? { scriptTiming: raw.scriptTiming } : {}) }
 }
 
 /**

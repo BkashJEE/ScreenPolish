@@ -18,6 +18,7 @@ import {
   type CaptureFileKey,
   type CaptureStartMessage,
   type CaptureStartedMessage,
+  type GuideView,
   type RecordingState,
   type StartRecordingRequest
 } from '@shared/ipc'
@@ -42,6 +43,7 @@ import { alignFile, remuxFile, remuxTimeoutMs, rescaleEvents, videoSize } from '
 import { FINGERPRINT_CAPTURE_TIMEOUT_MS, FINGERPRINT_CAPTURE_WIDTH, windowJpeg } from './linux/window-previews'
 import { FINGERPRINT_HEIGHT, FINGERPRINT_WIDTH, fingerprintFromPixels, pickByFingerprint } from '@shared/frame-fingerprint'
 import { cursorBakedIntoCapture } from './capture-cursor'
+import { moveGuide, startGuide, type GuideState } from '@shared/recording-guide'
 import { cancelRegionPicker, createCaptureWindow, loadPage } from './windows'
 import { SystemAudioRecorder } from './linux/system-audio'
 
@@ -189,6 +191,7 @@ interface Active {
 
 export type StateListener = (state: RecordingState) => void
 
+
 export class RecordingSession {
   /**
    * Cards, background and shape a recording plan chose for the next take.
@@ -201,6 +204,8 @@ export class RecordingSession {
   private active: Active | null = null
   private stopping: Promise<void> | null = null
   private readonly logger = new InputLogger()
+  private guide: GuideState | null = null
+  private readonly guideListeners = new Set<(view: GuideView | null) => void>()
 
   /** Recording finished and files are on disk. */
   onFinished: ((folder: string) => void) | null = null
@@ -223,6 +228,11 @@ export class RecordingSession {
     return this.active?.startMessage.webcam?.deviceId ?? null
   }
 
+  /** What is being recorded: a whole screen, a window or a drawn region. */
+  get activeSourceKind(): StartRecordingRequest['source']['kind'] | null {
+    return this.active?.sourceKind ?? null
+  }
+
   get activeDisplay(): Display | null {
     return this.active?.display ?? null
   }
@@ -230,6 +240,46 @@ export class RecordingSession {
   /** Physical-px region being recorded, and whether it is a user-drawn region. */
   get activeRegion(): { region: CaptureRegion; isRegion: boolean } | null {
     return this.active ? { region: this.active.region, isRegion: this.active.sourceKind === 'region' } : null
+  }
+
+  /** The recording guide of a planned take while it records, or null. */
+  get guideView(): GuideView | null {
+    if (!this.guide || !this.active) return null
+    return { steps: this.guide.steps, index: this.guide.index, onScreen: this.active.sourceKind !== 'screen' }
+  }
+
+  onGuideChange(listener: (view: GuideView | null) => void): () => void {
+    this.guideListeners.add(listener)
+    return () => this.guideListeners.delete(listener)
+  }
+
+  /** Move the guide: a click inside the recording, or its Next or Back button. Marks or unmarks the step in the input log. */
+  moveGuide(move: 'click' | 'next' | 'back', tMs = this.logger.clockMs): void {
+    if (!this.guide || tMs === null) return
+    const next = moveGuide(this.guide, move, tMs)
+    if (next === this.guide) return
+    if (next.index > this.guide.index && this.logger.markStep() === null) return
+    if (next.index < this.guide.index) this.logger.unmarkStep()
+    this.guide = next
+    this.emitGuide()
+  }
+
+  private emitGuide(): void {
+    const view = this.guideView
+    for (const l of this.guideListeners) {
+      try {
+        l(view)
+      } catch (err) {
+        console.warn('[recording] guide listener failed', err)
+      }
+    }
+  }
+
+  private endGuide(): void {
+    this.logger.onPress = null
+    if (!this.guide) return
+    this.guide = null
+    this.emitGuide()
   }
 
   onStateChange(listener: StateListener): () => void {
@@ -435,6 +485,12 @@ export class RecordingSession {
         window: trackedWindow,
         monitors: trackedMonitors
       })
+      // A planned take with steps records with the guide: each click moves it on.
+      this.guide = startGuide(this.nextTakeLook?.steps ?? [])
+      if (this.guide) {
+        this.logger.onPress = (t) => this.moveGuide('click', t)
+        this.emitGuide()
+      }
       // A partial input log means partial polish (no clicks = no auto-zoom). Say so
       // at the start of the take rather than letting the editor look broken later.
       const caps = this.logger.capabilities
@@ -703,6 +759,7 @@ export class RecordingSession {
     this.setState({ status: 'finalizing', folder: rec.folder })
     const audioStopped = rec.systemAudio?.stop().catch((error) => this.onWarning?.(`System audio finalization: ${String(error)}`))
     const nativeStopped = rec.native?.gsr.stop()
+    this.endGuide()
     let events = this.logger.stop()
     // Everything from here to the sidecars is best effort: whatever happens,
     // the files that exist are kept and the session returns to idle.
@@ -767,6 +824,7 @@ export class RecordingSession {
     await rec.systemAudio?.stop().catch(() => undefined)
     rec.startedReject?.(err instanceof Error ? err : new Error(String(err)))
     rec.startedReject = null
+    this.endGuide()
     if (this.logger.running) this.logger.stop()
     this.closeHandles(rec)
     this.teardown(rec)

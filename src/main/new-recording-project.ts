@@ -35,8 +35,11 @@ export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorS
   const looked = args.style ? applyLook(base, args.style) : base
   // A look that styles captions wants them: the editor transcribes the take the first time it opens it.
   const styled = args.style?.captions.style && looked.captions ? { ...looked, captions: { ...looked.captions, auto: true } } : looked
-  // Captions planned before the take become its script, timed to its clicks when the editor first opens it.
-  const planned = look?.captions?.length ? look.captions.join('\n') : null
+  // Captions planned before the take become its script. A plan with steps is
+  // recorded with the guide, which marks when each step began: line N is step
+  // N's caption, timed to that mark. Otherwise the lines follow the clicks.
+  const guided = !!look?.steps?.some((s) => s.caption)
+  const planned = guided ? look!.steps!.map((s) => s.caption ?? '').join('\n') : look?.captions?.length ? look.captions.join('\n') : null
   return {
     ...styled,
     // A planned take is named by its intro card rather than the window it caught.
@@ -45,7 +48,7 @@ export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorS
     ...(look?.background ? { background: { kind: 'gradient' as const, colors: [...look.background], angle: 135 } } : {}),
     scenes: look?.scenes ?? [],
     ...(planned
-      ? { captions: { ...(styled.captions ?? { enabled: false, cues: [], size: 1, position: 'bottom' as const }), auto: true, script: planned, scriptTiming: 'clicks' as const } }
+      ? { captions: { ...(styled.captions ?? { enabled: false, cues: [], size: 1, position: 'bottom' as const }), auto: true, script: planned, scriptTiming: guided ? ('steps' as const) : ('clicks' as const) } }
       : {})
   }
 }
