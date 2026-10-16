@@ -1,6 +1,6 @@
 import { effectiveTrim } from './layout'
 import { exportDurationSec, exportFrameAt, sceneTimeline, type ExportFrame } from './scenes'
-import { sourceTimeAt, speedSpans } from './speed'
+import { outputTimeAt, sourceTimeAt, speedSpans } from './speed'
 import type { Project } from './types'
 
 /**
@@ -21,6 +21,10 @@ export function takeOutput(project: Project, sourceDurationSec: number) {
     at(t: number): ExportFrame | { kind: 'recording'; recordingSec: number; sourceSec: number } {
       const frame = exportFrameAt(timeline, recordingSec, t)
       return frame.kind === 'scene' ? frame : { ...frame, sourceSec: sourceTimeAt(frame.recordingSec, spans) }
+    },
+    /** The output second showing source time `sourceSec` of the recording. */
+    fromSource(sourceSec: number): number {
+      return timeline.introSec + outputTimeAt(sourceSec, spans)
     }
   }
 }

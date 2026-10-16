@@ -17,5 +17,6 @@ describe("a take's output clock", () => {
     // 4 s into the recording: 2..5 is 3 s, then the cut skips to 7, so source 8.
     expect(r.kind).toBe('recording')
     expect(r.sourceSec).toBeCloseTo(8)
+    expect(out.fromSource(8)).toBeCloseTo(7)
   })
 })
