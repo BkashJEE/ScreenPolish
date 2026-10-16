@@ -22,6 +22,8 @@ import { regionFromOverlayRect } from './region-math'
 import { replayBuffer } from './replay'
 import { claimServerSpawn, serverExecutable } from './server-lock'
 import { openEditor } from './windows'
+import { createSequenceFolder, isSequenceFolder, readSequence } from './sequence'
+import { isRecordingFolderName } from './naming'
 
 export interface CliPayload {
   cli: string[]
@@ -220,12 +222,36 @@ export function startRequestFor(start: StartOptions): StartRecordingRequest {
   }
 }
 
+/** A recording or a sequence: an absolute path, a folder name, or a sequence's name. */
 function resolveFolder(input: string): string {
   const root = recordingsRoot()
   const candidate = path.isAbsolute(input) ? input : path.join(root, input)
   const folder = assertInsideRoot(root, candidate)
-  if (!fs.existsSync(path.join(folder, 'screen.mp4'))) throw new Error(`No recording at ${folder}`)
-  return folder
+  if (fs.existsSync(path.join(folder, 'screen.mp4')) || isSequenceFolder(folder)) return folder
+  const named = sequenceNamed(root, input)
+  if (named) return named
+  throw new Error(`No recording or sequence at ${folder}`)
+}
+
+/** The newest sequence titled `name`, ignoring case. */
+function sequenceNamed(root: string, name: string): string | null {
+  const wanted = name.trim().toLowerCase()
+  if (!wanted || !fs.existsSync(root)) return null
+  const folders = fs
+    .readdirSync(root)
+    .filter(isRecordingFolderName)
+    .sort()
+    .reverse()
+  for (const f of folders) {
+    const folder = path.join(root, f)
+    if (!isSequenceFolder(folder)) continue
+    try {
+      if (readSequence(root, folder).title.toLowerCase() === wanted) return folder
+    } catch {
+      // Unreadable; not this one.
+    }
+  }
+  return null
 }
 
 async function waitForIdle(session: RecordingSession, timeoutMs: number): Promise<void> {
@@ -235,8 +261,10 @@ async function waitForIdle(session: RecordingSession, timeoutMs: number): Promis
 
 async function exportIfAsked(folder: string, exp: ExportOptions): Promise<{ export?: string }> {
   if (!exp.kind) return {}
-  const name = exp.name ?? `${path.basename(folder)}-${exp.kind}`
-  const out = await requestExport(folder, exp.kind, name)
+  const sequence = isSequenceFolder(folder)
+  const name = exp.name ?? (sequence ? readSequence(recordingsRoot(), folder).title : '') ?? ''
+  // A sequence renders every take it uses, so it gets longer than one take.
+  const out = await requestExport(folder, exp.kind, name || `${path.basename(folder)}-${exp.kind}`, sequence ? 60 * 60 * 1000 : undefined)
   return { export: out }
 }
 
@@ -299,6 +327,13 @@ export async function executeCli(command: CliCommand, ctx: CliContext): Promise<
       const folder = resolveFolder(command.folder)
       const out = await exportIfAsked(folder, command.export)
       return { ok: true, folder, ...out }
+    }
+    case 'sequence-create': {
+      const root = recordingsRoot()
+      const takes = command.takes.map((t) => path.basename(resolveFolder(t)))
+      for (const t of takes) if (isSequenceFolder(path.join(root, t))) throw new Error(`${t} is a sequence; a sequence is made of takes.`)
+      const { folder, sequence } = createSequenceFolder(root, takes, command.title ?? '')
+      return { ok: true, folder, name: sequence.title || path.basename(folder), sequence }
     }
     case 'quit': {
       if (session.isActive) return { ok: false, error: 'Recording in progress; stop it first' }

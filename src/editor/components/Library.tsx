@@ -101,6 +101,9 @@ export function Library({ onOpen, refreshKey }: { onOpen: (folder: string) => vo
   const [busy, setBusy] = useState(false)
   const [importing, setImporting] = useState(false)
   const [cardSize, setCardSize] = useState(loadLibraryCardSize)
+  // Making a sequence: the takes picked so far, in the order they will play; null when not picking.
+  const [picking, setPicking] = useState<string[] | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
     setBusy(true)
@@ -166,6 +169,14 @@ export function Library({ onOpen, refreshKey }: { onOpen: (folder: string) => vo
           )}
           <Button
             size="sm"
+            disabled={picking !== null || !items || items.filter((i) => !i.sequence).length < 2}
+            title="One video from several takes, one after another"
+            onClick={() => setPicking([])}
+          >
+            Make a sequence
+          </Button>
+          <Button
+            size="sm"
             disabled={importing}
             title="Edit a video made elsewhere: OBS, a phone, another recorder"
             onClick={() => {
@@ -209,6 +220,36 @@ export function Library({ onOpen, refreshKey }: { onOpen: (folder: string) => vo
 
       {/* Scrolling moves a card out from under a still pointer without a
           pointerleave, so a scroll closes the preview. */}
+      {picking && (
+        <div className="mx-5 mb-1 flex flex-wrap items-center gap-2 rounded-[8px] border border-accent/40 bg-bg-2 px-3 py-2 text-[12px]" role="status">
+          <span className="text-fg">Pick takes in the order they should play.</span>
+          <span className="text-fg-muted">{picking.length} picked</span>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setPicking(null)} disabled={creating}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={picking.length < 2 || creating}
+              icon={creating ? <Spinner size={12} /> : undefined}
+              onClick={() => {
+                setCreating(true)
+                void window.polish
+                  .sequenceCreate(picking)
+                  .then((folder) => {
+                    setPicking(null)
+                    onOpen(folder)
+                  })
+                  .catch((e: unknown) => window.alert(`Could not make the sequence: ${e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e)}`))
+                  .finally(() => setCreating(false))
+              }}
+            >
+              Make sequence
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto p-5" onScroll={preview.close}>
         {error && (
           <div className="mb-3 flex items-center gap-2 rounded-[8px] border border-danger/30 bg-danger-soft px-3 py-2 text-[12px] text-danger">
@@ -230,9 +271,25 @@ export function Library({ onOpen, refreshKey }: { onOpen: (folder: string) => vo
         )}
         {items && items.length > 0 && (
           <div className="library-card-grid grid gap-5" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${cardSize}px, 100%), 1fr))` }}>
-            {items.map((item) => (
-              <RecordingCard key={item.folder} item={item} onOpen={() => { preview.close(); onOpen(item.folder) }} onDelete={() => remove(item.folder)} preview={preview.handlers} />
-            ))}
+            {items.map((item) => {
+              const order = picking ? picking.indexOf(item.folder) : -1
+              return (
+                <RecordingCard
+                  key={item.folder}
+                  item={item}
+                  picked={picking ? (order >= 0 ? order + 1 : 0) : null}
+                  onOpen={() => {
+                    preview.close()
+                    if (!picking) return onOpen(item.folder)
+                    if (item.sequence) return
+                    setPicking(order >= 0 ? picking.filter((f) => f !== item.folder) : [...picking, item.folder])
+                  }}
+                  onDelete={() => remove(item.folder)}
+                  // A sequence has no picture of its own to scrub.
+                  preview={item.sequence || picking ? undefined : preview.handlers}
+                />
+              )
+            })}
           </div>
         )}
       </div>
@@ -254,7 +311,7 @@ export function formatBytes(bytes: number): string {
   return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`
 }
 
-function RecordingCard({ item, onOpen, onDelete, preview }: { item: RecordingSummary; onOpen: () => void; onDelete: () => Promise<void>; preview?: PreviewHandlers }) {
+function RecordingCard({ item, onOpen, onDelete, preview, picked = null }: { item: RecordingSummary; onOpen: () => void; onDelete: () => Promise<void>; preview?: PreviewHandlers; /** While making a sequence: this take's place in it (1-based), 0 when not picked; null when not picking. */ picked?: number | null }) {
   const [confirm, setConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [broken, setBroken] = useState(false)
@@ -270,9 +327,11 @@ function RecordingCard({ item, onOpen, onDelete, preview }: { item: RecordingSum
       <button
         type="button"
         onClick={onOpen}
-        disabled={confirm}
-        className="relative aspect-video w-full overflow-hidden bg-bg-2 text-left"
-        aria-label={`Open ${item.name}`}
+        // A sequence cannot be part of a sequence.
+        disabled={confirm || (picked !== null && !!item.sequence)}
+        className={cx('relative aspect-video w-full overflow-hidden bg-bg-2 text-left', picked !== null && item.sequence && 'opacity-40', picked ? 'ring-2 ring-inset ring-accent' : '')}
+        aria-label={picked !== null ? `${picked ? 'Unpick' : 'Pick'} ${item.name}` : `Open ${item.name}`}
+        aria-pressed={picked !== null ? picked > 0 : undefined}
         onPointerEnter={(e) => !confirm && preview?.enter(item, e)}
         onPointerMove={(e) => preview?.move(e)}
         onPointerLeave={() => preview?.leave()}
@@ -284,9 +343,18 @@ function RecordingCard({ item, onOpen, onDelete, preview }: { item: RecordingSum
             <Film size={24} />
           </div>
         )}
-        <span className="library-duration absolute bottom-2 right-2 rounded-md bg-black/75 px-2 py-1 font-mono text-[10.5px] tabular-nums text-white">
-          {formatDurationShort(item.durationSec)}
-        </span>
+        {item.sequence ? (
+          <span className="library-duration absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/75 px-2 py-1 text-[10.5px] text-white" title="A sequence of takes">
+            <SequenceIcon /> {item.sequence.clips} {item.sequence.clips === 1 ? 'clip' : 'clips'}
+          </span>
+        ) : (
+          <span className="library-duration absolute bottom-2 right-2 rounded-md bg-black/75 px-2 py-1 font-mono text-[10.5px] tabular-nums text-white">
+            {formatDurationShort(item.durationSec)}
+          </span>
+        )}
+        {picked ? (
+          <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-white">{picked}</span>
+        ) : null}
       </button>
 
       <div className="rc-meta flex items-center gap-2 px-3.5 py-3">
@@ -311,8 +379,8 @@ function RecordingCard({ item, onOpen, onDelete, preview }: { item: RecordingSum
 
       {confirm && (
         <div className="fade-in absolute inset-0 flex flex-col items-center justify-center gap-2 bg-bg-1/95 p-3 text-center">
-          <div className="text-[12.5px] font-medium text-fg">Delete this recording?</div>
-          <div className="text-[11.5px] text-fg-muted">The folder and every file in it are removed.</div>
+          <div className="text-[12.5px] font-medium text-fg">{item.sequence ? 'Delete this sequence?' : 'Delete this recording?'}</div>
+          <div className="text-[11.5px] text-fg-muted">{item.sequence ? 'Its exports are removed; the takes it uses stay.' : 'The folder and every file in it are removed.'}</div>
           <div className="mt-1 flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirm(false)} disabled={deleting} autoFocus>
               Cancel
@@ -338,5 +406,15 @@ function RecordingCard({ item, onOpen, onDelete, preview }: { item: RecordingSum
         </div>
       )}
     </div>
+  )
+}
+
+/** Stacked frames: a sequence of takes. */
+function SequenceIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <rect x="1.5" y="5.5" width="10" height="8" rx="1.5" />
+      <path d="M4.5 3.5h8a1.5 1.5 0 0 1 1.5 1.5v6" />
+    </svg>
   )
 }

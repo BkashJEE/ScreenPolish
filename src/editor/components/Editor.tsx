@@ -25,6 +25,7 @@ import { AppearancePicker } from './AppearancePicker'
 import { CropEditor } from './CropEditor'
 import { Overlays } from './Overlays'
 import { Preview } from './Preview'
+import { SequenceEditor } from './SequenceEditor'
 import { ScrubBar } from './ScrubBar'
 import { ThumbnailSheet } from './ThumbnailSheet'
 import { Transport } from './Transport'
@@ -48,22 +49,32 @@ function projectForDevPreview(project: Project): Project {
   return { ...project, background: nextBackground, mockup: { ...project.mockup, kind: nextKind }, output: { ...project.output, height: nextHeight } }
 }
 
-export function Editor({ folder, onBack }: { folder: string; onBack: () => void }) {
+export function Editor({ folder, onBack, onOpen }: { folder: string; onBack: () => void; /** Open another folder, such as a take from a sequence. */ onOpen?: (folder: string) => void }) {
   const [loaded, setLoaded] = useState<LoadedProject | null>(null)
+  const [sequence, setSequence] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
     setLoaded(null)
+    setSequence(false)
     setError(null)
+    // A sequence folder has no recording of its own; it opens in the sequence editor.
     window.polish
-      .load(folder)
-      .then((l) => alive && setLoaded({ ...l, project: projectForDevPreview(normalizeProject(l.project)) }))
+      .isSequence(folder)
+      .catch(() => false)
+      .then((isSequence) => {
+        if (!alive) return
+        if (isSequence) return setSequence(true)
+        return window.polish.load(folder).then((l) => alive && setLoaded({ ...l, project: projectForDevPreview(normalizeProject(l.project)) }))
+      })
       .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)))
     return () => {
       alive = false
     }
   }, [folder])
+
+  if (sequence) return <SequenceEditor key={folder} folder={folder} onBack={onBack} onOpenTake={onOpen} />
 
   if (error) {
     return (

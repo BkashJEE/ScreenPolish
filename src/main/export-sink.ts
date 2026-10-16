@@ -123,7 +123,7 @@ export function createExportSink(deps: ExportSinkDeps): ExportSink {
     busy: () => jobs.size > 0,
     async begin(request) {
       const folder = assertInsideRoot(deps.root(), request.folder)
-      const exportsDir = path.join(folder, 'exports')
+      const exportsDir = request.into ? assertInsideRoot(deps.root(), request.into) : path.join(folder, 'exports')
       await fs.promises.mkdir(exportsDir, { recursive: true })
       const existing = await fs.promises.readdir(exportsDir)
       const base = sanitizeBaseName(request.name)

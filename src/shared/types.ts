@@ -308,4 +308,6 @@ export interface RecordingSummary {
   sizeBytes?: number
   /** polish:// URL of screen.mp4 for the library's hover preview; absent when the take is empty. */
   preview?: string
+  /** Present when this is a sequence of takes rather than a recording. */
+  sequence?: { clips: number }
 }

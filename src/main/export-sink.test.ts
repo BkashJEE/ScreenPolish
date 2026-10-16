@@ -38,6 +38,16 @@ describe('an export never writes to the name the user will see', () => {
     expect(listed.filter((f) => f.endsWith('.mp4') && !f.endsWith(PART_SUFFIX))).toEqual([])
   })
 
+  it('writes into another folder when asked, only inside the recordings root', async () => {
+    const root = makeRoot()
+    const s = sink(root)
+    const into = path.join(root, 'sequence', 'parts')
+    const { path: writePath } = await s.begin({ folder: path.join(root, 'take'), kind: 'mp4', name: 'clip-0', into })
+    expect(path.dirname(writePath)).toBe(into)
+    expect(fs.existsSync(path.join(root, 'take', 'exports'))).toBe(false)
+    await expect(s.begin({ folder: path.join(root, 'take'), kind: 'mp4', name: 'x', into: path.join(root, '..') })).rejects.toThrow(/outside/)
+  })
+
   it('refuses to save a render that produced nothing, and says so', async () => {
     const root = makeRoot()
     const s = sink(root)
