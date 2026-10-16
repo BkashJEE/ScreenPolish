@@ -100,3 +100,27 @@ describe('replay commands', () => {
     expect(looksLikeCli(['replay', 'save'])).toBe(true)
   })
 })
+
+describe('sequence create', () => {
+  it('takes the takes in order, and a name to export it by', () => {
+    expect(looksLikeCli(['sequence', 'create', 'a', 'b'])).toBe(true)
+    expect(parseCli(['sequence', 'create', '--out', 'Reel', '2026-10-15_12-37-15', '2026-10-15_12-41-02'])).toEqual({
+      kind: 'sequence-create',
+      takes: ['2026-10-15_12-37-15', '2026-10-15_12-41-02'],
+      title: 'Reel'
+    })
+    expect(parseCli(['sequence', 'create', 'a', '--name', 'X', 'b'])).toEqual({ kind: 'sequence-create', takes: ['a', 'b'], title: 'X' })
+    expect(parseCli(['sequence', 'create', 'a'])).toEqual({ kind: 'sequence-create', takes: ['a'], title: null })
+  })
+
+  it('says what is missing', () => {
+    expect(() => parseCli(['sequence'])).toThrow(/expects create/)
+    expect(() => parseCli(['sequence', 'create'])).toThrow(/one or more takes/)
+    expect(() => parseCli(['sequence', 'create', '--out'])).toThrow(/needs a value/)
+    expect(() => parseCli(['sequence', 'create', '--fps', '30', 'a'])).toThrow(/Unknown option/)
+  })
+
+  it('gives a sequence export time to render every take', () => {
+    expect(replyTimeoutMs({ kind: 'export', folder: 'x', export: { kind: 'mp4', name: null } })).toBe(60 * 60 * 1000)
+  })
+})
