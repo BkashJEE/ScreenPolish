@@ -327,7 +327,8 @@ function RecordingCard({ item, onOpen, onDelete, preview, picked = null }: { ite
       <button
         type="button"
         onClick={onOpen}
-        disabled={confirm}
+        // A sequence cannot be part of a sequence.
+        disabled={confirm || (picked !== null && !!item.sequence)}
         className={cx('relative aspect-video w-full overflow-hidden bg-bg-2 text-left', picked !== null && item.sequence && 'opacity-40', picked ? 'ring-2 ring-inset ring-accent' : '')}
         aria-label={picked !== null ? `${picked ? 'Unpick' : 'Pick'} ${item.name}` : `Open ${item.name}`}
         aria-pressed={picked !== null ? picked > 0 : undefined}

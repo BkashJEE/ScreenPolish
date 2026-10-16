@@ -152,14 +152,34 @@ function LoadedSequenceEditor({
 
   const sequenceTime = current && output ? current.start + Math.max(0, output.fromSource(sourceTime) - current.in) : 0
 
+  // Going to another take mounts a new preview, which reports its first frame
+  // before its video has loaded. Until it has, that report is ignored and the
+  // wanted moment is kept, then sought to (the millisecond makes it a change
+  // the preview acts on; it skips anything closer than a microsecond to what
+  // it last reported).
+  const pending = useRef<number | null>(null)
+  const goTo = useCallback(
+    (i: number, source: number) => {
+      if (sequence.clips[i]?.take !== sequence.clips[index]?.take) pending.current = source
+      setIndex(i)
+      setSourceTime(source)
+    },
+    [sequence, index]
+  )
+  const onDuration = () => {
+    const t = pending.current
+    if (t === null) return
+    pending.current = null
+    setSourceTime(t + 1e-3)
+  }
+
   const seek = useCallback(
     (t: number) => {
       const pos = clipAtSequenceTime(sequence, lengths, t)
       if (!pos) return
-      setIndex(pos.clipIndex)
-      setSourceTime(sourceAt(pos.clipIndex, pos.localTime))
+      goTo(pos.clipIndex, sourceAt(pos.clipIndex, pos.localTime))
     },
-    [sequence, lengths, sourceAt]
+    [sequence, lengths, sourceAt, goTo]
   )
 
   // Keep the playhead on a clip that exists after an edit.
@@ -175,16 +195,17 @@ function LoadedSequenceEditor({
     seek(0)
   }, [placed, seek])
 
-  // Playback crosses into the next clip when this one reaches its out point.
+  // Playback crosses into the next clip where it starts on the sequence clock:
+  // at this clip's out point, or where a crossfade into the next begins. The
+  // preview cuts there rather than fading; the export does the fade.
   const onTime = (t: number) => {
+    if (pending.current !== null) return
     setSourceTime(t)
     if (!current || !output) return
-    if (output.fromSource(t) >= current.out - 1 / 60) {
+    if (output.fromSource(t) >= current.out - current.overlapNext - 1 / 60) {
       const next = placed[index + 1]
-      if (next) {
-        setIndex(index + 1)
-        setSourceTime(sourceAt(index + 1, next.in))
-      } else setPlaying(false)
+      if (next) goTo(index + 1, sourceAt(index + 1, next.in))
+      else setPlaying(false)
     }
   }
 
@@ -308,8 +329,9 @@ function LoadedSequenceEditor({
             playing={playing}
             trim={trim}
             onTime={onTime}
-            onPlayingChange={setPlaying}
-            onDuration={() => undefined}
+            // The take being left can report its own end as it is swapped out; that is not a pause.
+            onPlayingChange={(p) => (p || pending.current === null) && setPlaying(p)}
+            onDuration={onDuration}
             onError={(m) => setResult({ error: m })}
             onSelectOverlay={() => undefined}
             onOverlayPatch={() => undefined}
@@ -348,8 +370,7 @@ function LoadedSequenceEditor({
           current={index}
           onSelect={(i) => {
             setPlaying(false)
-            setIndex(i)
-            setSourceTime(sourceAt(i, placed[i]?.in ?? 0))
+            goTo(i, sourceAt(i, placed[i]?.in ?? 0))
           }}
           onMove={(from, to) => update(moveClip(sequence, from, to))}
           onRemove={(i) => update(removeSequenceClip(sequence, i))}
