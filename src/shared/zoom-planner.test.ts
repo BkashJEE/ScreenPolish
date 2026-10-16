@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROJECT, type MouseButton, type Project, type RecordingEvents, type ZoomSegment } from './types'
 import { DEFAULT_ZOOM_PLAN, baseSegmentId, planAutoZoom, resolveZoomSegments, autoStyle } from './zoom-planner'
-import { cameraAt } from './camera'
-import { HOLD_GAP_SEC } from './camera'
+import { HOLD_GAP_SEC, cameraAt } from './camera'
 
 const region = { x: 0, y: 0, width: 1920, height: 1080, scale: 1 }
 
