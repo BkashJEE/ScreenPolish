@@ -93,15 +93,25 @@ export function CaptionsPanel({
     }
   }
 
-  // A take recorded under a look with captions transcribes its microphone once, when first opened.
+  // A new take that asked for captions gets them once, when first opened: from its voice when it
+  // has one, otherwise from the script planned before it was recorded, timed to its clicks.
   const autoTried = useRef<string | null>(null)
   useEffect(() => {
-    if (!captions.auto || busy || !status || autoTried.current === folder) return
+    if (!captions.auto || busy || !status || autoTried.current === folder || captions.cues.length > 0) return
+    const voice = status.installed && sources.includes('mic')
+    if (!voice && captions.script) {
+      // The take's length arrives after the project; the script is timed against it.
+      if (duration <= 0) return
+      autoTried.current = folder
+      const cues = scriptCues(captions.script, effectiveTrim(project, duration), captions.scriptTiming ?? 'clicks', clicks, `script-${Date.now().toString(36)}`)
+      if (cues.length) patch({ cues, enabled: true })
+      return
+    }
     autoTried.current = folder
-    // Without a microphone or the engine there is nothing to try; the flag stays, unused, rather than adding an edit nobody made.
-    if (status.installed && sources.includes('mic') && captions.cues.length === 0) void run('mic', true)
+    // Without a voice or a script there is nothing to try; the flag stays, unused, rather than adding an edit nobody made.
+    if (voice) void run('mic', true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captions.auto, status, folder])
+  }, [captions.auto, status, folder, duration])
 
   const engineMissing = status !== null && !status.installed
   // A script needs neither a voice nor the engine, so it is offered whatever this take has.

@@ -50,6 +50,13 @@ describe('a planned take', () => {
     expect(mergeProject(JSON.parse(JSON.stringify(p))).scenes).toHaveLength(2)
   })
 
+  it('gets the planned captions as its script, to be timed to its clicks when opened', () => {
+    const p = newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look: { ...look, captions: ['Show the library', 'Open the export sheet'] } })
+    expect(p.captions).toMatchObject({ auto: true, script: 'Show the library\nOpen the export sheet', scriptTiming: 'clicks', cues: [] })
+    expect(mergeProject(JSON.parse(JSON.stringify(p))).captions).toMatchObject({ auto: true, scriptTiming: 'clicks' })
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look }).captions?.script).toBeUndefined()
+  })
+
   it('is an ordinary take without a plan', () => {
     const p = newRecordingProject({ title: 'Firefox', fps: 30, cursorSkin: 'hand', look: null })
     expect(p.scenes).toEqual([])

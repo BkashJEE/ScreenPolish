@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PLAN_MAX_SEC, PLAN_MAX_SHOTS, PLAN_MIN_SEC, extractPlan, normalizePlan, planPrompt } from './record-plan'
+import { PLAN_MAX_CAPTIONS, PLAN_MAX_SEC, PLAN_MAX_SHOTS, PLAN_MIN_SEC, extractPlan, normalizePlan, normalizeTakeLook, planPrompt, takeLookOf } from './record-plan'
 
 const good = {
   summary: 'A 45-second walkthrough of exporting a GIF, for X.',
@@ -104,5 +104,28 @@ describe('planPrompt', () => {
     ])
     expect(prompt.indexOf('User: Demo for X')).toBeLessThan(prompt.indexOf('You: A 45 s window recording.'))
     expect(prompt.indexOf('You: A 45 s window recording.')).toBeLessThan(prompt.indexOf('User: Make it shorter'))
+  })
+})
+
+describe('planned captions', () => {
+  it('are kept in order, trimmed, and capped', () => {
+    const plan = normalizePlan({ ...good, captions: ['  Show the library ', '', 42, 'Open the export sheet', ...Array.from({ length: 40 }, (_, i) => `line ${i}`)] })!
+    expect(plan.captions.slice(0, 2)).toEqual(['Show the library', 'Open the export sheet'])
+    expect(plan.captions).toHaveLength(PLAN_MAX_CAPTIONS)
+    expect(normalizePlan(good)!.captions).toEqual([])
+  })
+
+  it('go with the take, and survive the trip to the recorder', () => {
+    const plan = normalizePlan({ ...good, captions: ['Show the library', 'Open the export sheet'] })!
+    const look = takeLookOf(plan)
+    expect(look.captions).toEqual(['Show the library', 'Open the export sheet'])
+    expect(normalizeTakeLook(JSON.parse(JSON.stringify(look)))?.captions).toEqual(['Show the library', 'Open the export sheet'])
+    expect(takeLookOf(normalizePlan(good)!).captions).toBeUndefined()
+  })
+
+  it('are asked for in the prompt', () => {
+    const prompt = planPrompt({ screens: [], windows: [], hasMic: false, hasWebcam: false }, [{ role: 'user', text: 'a demo' }])
+    expect(prompt).toContain('"captions"')
+    expect(prompt).toMatch(/one line per step/)
   })
 })

@@ -35,12 +35,17 @@ export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorS
   const looked = args.style ? applyLook(base, args.style) : base
   // A look that styles captions wants them: the editor transcribes the take the first time it opens it.
   const styled = args.style?.captions.style && looked.captions ? { ...looked, captions: { ...looked.captions, auto: true } } : looked
+  // Captions planned before the take become its script, timed to its clicks when the editor first opens it.
+  const planned = look?.captions?.length ? look.captions.join('\n') : null
   return {
     ...styled,
     // A planned take is named by its intro card rather than the window it caught.
     title: intro?.title || args.title,
     output: { ...styled.output, ...(look?.aspect ? { aspect: look.aspect } : {}) },
     ...(look?.background ? { background: { kind: 'gradient' as const, colors: [...look.background], angle: 135 } } : {}),
-    scenes: look?.scenes ?? []
+    scenes: look?.scenes ?? [],
+    ...(planned
+      ? { captions: { ...(styled.captions ?? { enabled: false, cues: [], size: 1, position: 'bottom' as const }), auto: true, script: planned, scriptTiming: 'clicks' as const } }
+      : {})
   }
 }
