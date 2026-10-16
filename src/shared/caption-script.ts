@@ -12,7 +12,12 @@ import { CAPTION_LINE_CHARS, type CaptionCue } from './captions'
  * read. Word timings are left out, so the word styles estimate them.
  */
 
-export type ScriptTiming = 'clicks' | 'even'
+/**
+ * 'clicks' starts lines at clicks, 'even' spreads them, and 'steps' starts
+ * line N when step N of a guided take began (the recording guide marks those
+ * moments); a take without marks falls back to clicks.
+ */
+export type ScriptTiming = 'clicks' | 'even' | 'steps'
 
 /** Longest caption made from a script: what fits on the two lines a caption shows. */
 export const SCRIPT_CHUNK_CHARS = CAPTION_LINE_CHARS * 2
@@ -105,12 +110,13 @@ function startsFrom(anchors: readonly number[], n: number, end: number): number[
  * times in source seconds; with none, or with timing 'even', the captions are
  * spread evenly.
  */
-export function scriptCues(script: string, range: { start: number; end: number }, timing: ScriptTiming, clicks: readonly number[] = [], idPrefix = 'script'): CaptionCue[] {
+export function scriptCues(script: string, range: { start: number; end: number }, timing: ScriptTiming, clicks: readonly number[] = [], idPrefix = 'script', stepStarts?: readonly number[]): CaptionCue[] {
+  if (timing === 'steps' && stepStarts) return stepCues(script, range, stepStarts, idPrefix)
   const chunks = scriptChunks(script)
   const span = range.end - range.start
   if (chunks.length === 0 || span <= 0) return []
   let anchors: number[]
-  const steps = timing === 'clicks' ? stepTimes(clicks, range) : []
+  const steps = timing === 'clicks' || timing === 'steps' ? stepTimes(clicks, range) : []
   if (steps.length > 0) {
     anchors = steps[0]! - range.start > OPENING_SEC ? [range.start, ...steps] : steps
   } else {
@@ -126,4 +132,24 @@ export function scriptCues(script: string, range: { start: number; end: number }
     const end = Math.min(next, range.end, start + Math.max(MAX_CUE_SEC, readingSec(text)))
     return { id: `${idPrefix}-${i}`, start, end: Math.max(end, Math.min(range.end, start + 0.3)), text }
   })
+}
+
+/**
+ * One caption per line, line N from when step N began: the take's start for
+ * the first, then each mark (source seconds). Lines are not split, so line N
+ * stays step N; a blank line is a step without a caption, and a line for a
+ * step the take never reached is left out.
+ */
+export function stepCues(script: string, range: { start: number; end: number }, stepStarts: readonly number[], idPrefix = 'script'): CaptionCue[] {
+  const lines = script.split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim())
+  const starts = [range.start, ...stepStarts.filter((t) => t > range.start && t < range.end)].sort((a, b) => a - b)
+  const cues: CaptionCue[] = []
+  lines.forEach((text, i) => {
+    const start = starts[i]
+    if (!text || start === undefined) return
+    const next = starts[i + 1] !== undefined ? starts[i + 1]! - 0.05 : range.end
+    const end = Math.min(next, range.end, start + Math.max(MAX_CUE_SEC, readingSec(text)))
+    if (end > start) cues.push({ id: `${idPrefix}-${i}`, start, end, text })
+  })
+  return cues
 }

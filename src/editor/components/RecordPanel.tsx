@@ -13,6 +13,9 @@ import { takeLookOf, type RecordPlan } from '../../shared/record-plan'
 import { defaultLook } from '../../shared/presets'
 import { DEFAULT_SHORTCUTS, shortcutLabel } from '../../shared/shortcuts'
 
+/** A plan with steps records with the recording guide. */
+const guided = (plan: RecordPlan): boolean => plan.shots.length > 0 || plan.captions.length > 0
+
 interface RecordSettings {
   mic: string
   webcam: string
@@ -163,7 +166,7 @@ export function RecordPanel({ recording, refreshKey }: { recording: RecordingSta
    * sets the panel and starts in the same click, before React has re-rendered
    * the state it just set, so it passes what it chose.
    */
-  const start = async (planned?: { selection: RecordSource; mic: string; system: boolean; fps: 30 | 60; maxDurationSec: number }) => {
+  const start = async (planned?: { selection: RecordSource; mic: string; system: boolean; fps: 30 | 60; maxDurationSec?: number }) => {
     const chosen = planned?.selection ?? selection
     if (!chosen) return
     setStarting(true)
@@ -180,7 +183,7 @@ export function RecordPanel({ recording, refreshKey }: { recording: RecordingSta
       system: planned?.system ?? settings.system,
       webcam: camValue ? { deviceId: camValue } : null,
       fps: planned?.fps ?? settings.fps,
-      ...(planned ? { maxDurationSec: planned.maxDurationSec } : plannedSec !== null ? { maxDurationSec: plannedSec } : {})
+      ...(planned ? (planned.maxDurationSec ? { maxDurationSec: planned.maxDurationSec } : {}) : plannedSec !== null ? { maxDurationSec: plannedSec } : {})
     }
     try {
       await window.polish.startRecording(request)
@@ -212,17 +215,18 @@ export function RecordPanel({ recording, refreshKey }: { recording: RecordingSta
     setSettings((s) => ({ ...s, ...result.choices, mic }))
     if (result.cursorSkin) patchApp({ cursorSkin: result.cursorSkin })
     await window.polish.setNextTakeLook(takeLookOf(plan))
-    setPlannedSec(plan.durationSec)
+    // A plan with steps is recorded with the guide, at your own pace: it stops when you stop it.
+    setPlannedSec(guided(plan) ? null : plan.durationSec)
     return { notes, selection: result.selection, mic, system: result.choices.system, fps: result.choices.fps }
   }
 
   const applyRecordingPlan = async (plan: RecordPlan): Promise<string[]> => (await setUpPlan(plan)).notes
 
-  /** Set the plan up and record it: counts in, records its length, stops itself. */
+  /** Set the plan up and record it: counts in and records; without steps it stops itself after its length. */
   const recordRecordingPlan = async (plan: RecordPlan): Promise<string[]> => {
     const set = await setUpPlan(plan)
     if (!set.selection) return [...set.notes, 'Nothing to record: no screen was found.']
-    void start({ selection: set.selection, mic: set.mic, system: set.system, fps: set.fps, maxDurationSec: plan.durationSec })
+    void start({ selection: set.selection, mic: set.mic, system: set.system, fps: set.fps, ...(guided(plan) ? {} : { maxDurationSec: plan.durationSec }) })
     return set.notes
   }
 

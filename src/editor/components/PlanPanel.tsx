@@ -174,8 +174,18 @@ export function PlanPanel({
                 ● Record this plan · {formatTime(plan.durationSec, { fraction: false })}
               </Button>
               <p className="text-[11.5px] leading-[1.45] text-fg-muted">
-                Read the shot list first: this window steps aside while recording. It counts in, records {formatTime(plan.durationSec, { fraction: false })} and stops by
-                itself; the title cards are added to the take.
+                {plan.shots.length || plan.captions.length ? (
+                  <>
+                    Record a window or a region and this window becomes your step guide beside it: what to do now and the caption it gets, moving on with each
+                    click. Stop when you are done; the captions and title cards are added to the take. Recording the whole screen hides the guide, since it
+                    would be in the video.
+                  </>
+                ) : (
+                  <>
+                    Read the shot list first: this window steps aside while recording. It counts in, records {formatTime(plan.durationSec, { fraction: false })} and stops
+                    by itself; the title cards are added to the take.
+                  </>
+                )}
               </p>
             </div>
           )}
