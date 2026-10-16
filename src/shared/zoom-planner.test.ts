@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROJECT, type MouseButton, type Project, type RecordingEvents, type ZoomSegment } from './types'
 import { DEFAULT_ZOOM_PLAN, baseSegmentId, planAutoZoom, resolveZoomSegments, autoStyle } from './zoom-planner'
 import { cameraAt } from './camera'
+import { HOLD_GAP_SEC } from './camera'
 
 const region = { x: 0, y: 0, width: 1920, height: 1080, scale: 1 }
 
@@ -351,5 +352,35 @@ describe('autoStyle', () => {
     expect(autoStyle(5, 100, 1920, 'cinematic')).toBe('orbit')
     expect(autoStyle(1, 100, 1920, 'zoom')).toBe('zoom')
     expect(autoStyle(4, 100, 1920, 'punch')).toBe('punch')
+  })
+})
+
+describe('clicks too far apart to share a view', () => {
+  // Two clicks 2.3 s apart at opposite corners: close enough in time to merge, too far apart to show both at 2x.
+  const events = makeEvents({ clicks: [click(49_680, 300, 300), click(51_990, 1700, 950)] })
+
+  it('keep their own zooms, close enough that the camera pans from one to the other', () => {
+    const segs = planAutoZoom(events, 60)
+    expect(segs).toHaveLength(2)
+    expect(segs[1]!.start - segs[0]!.end).toBeLessThan(HOLD_GAP_SEC)
+    expect([segs[0]!.x, segs[1]!.x]).toEqual([300, 1700])
+    for (const s of segs) expect(s.end - s.start).toBeGreaterThanOrEqual(DEFAULT_ZOOM_PLAN.minSegmentSec - 1e-9)
+  })
+
+  it('still merge when both fit in one view', () => {
+    const near = makeEvents({ clicks: [click(49_680, 800, 500), click(51_990, 1000, 600)] })
+    expect(planAutoZoom(near, 60)).toHaveLength(1)
+  })
+
+  it('merge as before when they come too fast to give each a readable zoom', () => {
+    const rapid = makeEvents({ clicks: [click(10_000, 200, 200), click(10_300, 1700, 900)] })
+    expect(planAutoZoom(rapid, 60)).toHaveLength(1)
+  })
+
+  it('merge as before in a project that removed automatic zooms, so its removals keep their meaning', () => {
+    expect(planAutoZoom(events, 60, { keepApart: false })).toHaveLength(1)
+    const removedOne = resolveZoomSegments(project({ removedAuto: ['auto-0'] }), events, 60)
+    expect(removedOne).toHaveLength(0)
+    expect(resolveZoomSegments(project({ removedAuto: [] }), events, 60)).toHaveLength(2)
   })
 })
