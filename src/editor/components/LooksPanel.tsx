@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BUILTIN_LOOKS } from '../../shared/builtin-looks'
 import { CURSOR_SKINS, type CursorSkin } from '../../shared/ipc'
-import { EMPTY_SHELF, applyLook, lookFromProject, type LookShelf } from '../../shared/presets'
+import { EMPTY_SHELF, applyLook, lookFromProject, type Look, type LookShelf } from '../../shared/presets'
 import type { Project } from '../../shared/types'
 import { X } from './icons'
 import { Button, TextInput, cx } from './ui'
@@ -12,7 +12,7 @@ import { Button, TextInput, cx } from './ui'
  * recording starts with. The shelf is kept in the app's settings folder, so it
  * is shared by every recording.
  */
-export function LooksPanel({ project, onProject }: { project: Project; onProject: (update: (p: Project) => Project) => void }) {
+export function LooksPanel({ project, onProject, hasMic }: { project: Project; onProject: (update: (p: Project) => Project) => void; /** Whether this take recorded a microphone, which captions are made from. */ hasMic: boolean }) {
   const [shelf, setShelf] = useState<LookShelf>(EMPTY_SHELF)
   const [name, setName] = useState('')
   const [note, setNote] = useState<string | null>(null)
@@ -30,6 +30,18 @@ export function LooksPanel({ project, onProject }: { project: Project; onProject
     } catch (e) {
       setError((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
     }
+  }
+
+  // A look only styles captions; say how to get them when this take has none yet.
+  const applied = (name: string, look: Look) => {
+    const needsCaptions = !!look.captions.style && !(project.captions?.cues.length)
+    setNote(
+      !needsCaptions
+        ? `Applied “${name}”. Undo puts the old style back.`
+        : hasMic
+          ? `Applied “${name}”. Its captions are made from your voice: Layers → Captions → Transcribe.`
+          : `Applied “${name}”. This take has no microphone, so it can’t have captions; turn the microphone on in Capture next time.`
+    )
   }
 
   const save = () => {
@@ -61,7 +73,7 @@ export function LooksPanel({ project, onProject }: { project: Project; onProject
                 title="Put this look on this recording"
                 onClick={() => {
                   onProject((cur) => applyLook(cur, p.look))
-                  setNote(`Applied “${p.name}”. Undo puts the old style back.`)
+                  applied(p.name, p.look)
                 }}
               >
                 <span className="block truncate text-[12px] text-fg">{p.name}</span>
@@ -84,7 +96,7 @@ export function LooksPanel({ project, onProject }: { project: Project; onProject
                   title="Put this look on this recording"
                   onClick={() => {
                     onProject((cur) => applyLook(cur, p.look))
-                    setNote(`Applied “${p.name}”.`)
+                    applied(p.name, p.look)
                   }}
                 >
                   {p.name}

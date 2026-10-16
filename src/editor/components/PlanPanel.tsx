@@ -279,6 +279,19 @@ function PlanCard({ plan }: { plan: RecordPlan }) {
           ))}
         </ol>
       )}
+      {plan.captions.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-line pt-2 text-[12px]">
+          <span className="text-fg-muted">Captions, one per click · ready when the take opens</span>
+          <ol className="flex flex-col gap-0.5">
+            {plan.captions.map((c, i) => (
+              <li key={i} className="grid grid-cols-[18px_1fr] gap-1.5">
+                <span className="font-mono text-fg-muted">{i + 1}</span>
+                <span>“{c}”</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {plan.prep.length > 0 && (
         <ul className="flex flex-col gap-0.5 border-t border-line pt-2 text-[12px] text-fg/80">
           {plan.prep.map((p, i) => (

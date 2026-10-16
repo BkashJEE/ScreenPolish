@@ -86,7 +86,7 @@ export function applyLook(project: Project, look: Look): Project {
     cursor: { ...l.cursor, ...(project.cursor.syncSec !== undefined ? { syncSec: project.cursor.syncSec } : {}) } as Project['cursor'],
     zoom: { ...project.zoom, ...l.zoom, manual: project.zoom.manual, removedAuto: project.zoom.removedAuto },
     ...(project.captions || l.captions.style || l.captions.highlight
-      ? { captions: { enabled: project.captions?.enabled ?? false, cues: project.captions?.cues ?? [], ...l.captions } }
+      ? { captions: { enabled: project.captions?.enabled ?? false, cues: project.captions?.cues ?? [], ...l.captions, ...(project.captions?.auto ? { auto: true } : {}) } }
       : {}),
     webcam: { ...project.webcam, ...l.webcam, enabled: project.webcam.enabled },
     ...(l.cutTransition ? { cutTransition: l.cutTransition } : {}),

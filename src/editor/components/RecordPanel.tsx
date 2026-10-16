@@ -10,6 +10,7 @@ import { PlanPanel } from './PlanPanel'
 import { applyPlan } from '../lib/plan-apply'
 import { formatTime } from '../lib/time'
 import { takeLookOf, type RecordPlan } from '../../shared/record-plan'
+import { defaultLook } from '../../shared/presets'
 import { DEFAULT_SHORTCUTS, shortcutLabel } from '../../shared/shortcuts'
 
 interface RecordSettings {
@@ -131,6 +132,14 @@ export function RecordPanel({ recording, refreshKey }: { recording: RecordingSta
 
   // Device ids saved earlier may no longer exist (unplugged). Fall back to "off".
   const micValue = devices.mics.some((d) => d.deviceId === settings.mic) ? settings.mic : ''
+  // Whether the starred look styles captions, which are made from the microphone.
+  const [lookWantsCaptions, setLookWantsCaptions] = useState(false)
+  useEffect(() => {
+    const check = () => void window.polish.listLooks().then((shelf) => setLookWantsCaptions(!!defaultLook(shelf)?.captions.style), () => undefined)
+    check()
+    window.addEventListener('focus', check)
+    return () => window.removeEventListener('focus', check)
+  }, [])
   const camValue =
     settings.webcam === 'auto' ? (devices.cams[0]?.deviceId ?? '') : devices.cams.some((d) => d.deviceId === settings.webcam) ? settings.webcam : ''
 
@@ -385,7 +394,10 @@ export function RecordPanel({ recording, refreshKey }: { recording: RecordingSta
           </div>
           {devices.error && <div className="text-[11.5px] text-danger">{devices.error}</div>}
 
-          <Row label={<span className="flex items-center gap-2"><Mic size={14} className="text-fg-muted" /> Microphone</span>}>
+          <Row
+            label={<span className="flex items-center gap-2"><Mic size={14} className="text-fg-muted" /> Microphone</span>}
+            hint={lookWantsCaptions && !micValue ? 'Your starred look has captions, and they are made from the microphone.' : undefined}
+          >
             <Select
               ariaLabel="Microphone"
               className="w-[150px]"

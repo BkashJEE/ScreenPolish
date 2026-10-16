@@ -47,6 +47,8 @@ export interface KnobsProps {
   children?: ReactNode
   /** Recorded audio, for silence removal. */
   audioUrls?: { mic?: string; system?: string }
+  /** Source seconds of each mouse press, for timing a caption script to the steps. */
+  clickTimes?: number[]
   /** Whether the cleaned-up microphone has been made for this recording. */
   hasCleanMic?: boolean
   /** Make the cleaned-up microphone. */
@@ -289,7 +291,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         {INSPECTOR_TABS.map((tab) => <button key={tab.id} type="button" aria-pressed={panel === tab.id} onClick={() => setPanel(tab.id)}>{tab.label}</button>)}
       </nav>
       <Section title="Looks">
-        <LooksPanel project={project} onProject={onProject} />
+        <LooksPanel project={project} onProject={onProject} hasMic={!!files.mic} />
       </Section>
       <Section title="Editor feel" defaultOpen={false}>
         <Row label="Playful sliders" hint="Elastic drag and spring-back; editor only">
@@ -982,6 +984,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           folder={files.folder}
           duration={duration}
           sources={[...(props.audioUrls?.mic ? (['mic'] as const) : []), ...(props.audioUrls?.system ? (['system'] as const) : [])]}
+          clicks={props.clickTimes ?? []}
         />
       </Section>
 

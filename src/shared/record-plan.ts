@@ -48,6 +48,8 @@ export interface RecordPlan {
   }
   /** Intro and outro cards. */
   scenes: Scene[]
+  /** What the viewer reads, one short line per step in order; timed to the clicks once recorded. */
+  captions: string[]
   /** Things to do before pressing Record: close notifications, zoom the browser… */
   prep: string[]
 }
@@ -56,6 +58,7 @@ export const PLAN_MAX_SEC = 600
 export const PLAN_MIN_SEC = 5
 export const PLAN_MAX_SHOTS = 20
 export const PLAN_MAX_PREP = 8
+export const PLAN_MAX_CAPTIONS = 30
 const MAX_TEXT = 280
 
 const HEX = /^#[0-9a-f]{6}$/i
@@ -116,6 +119,7 @@ export function normalizePlan(raw: unknown): RecordPlan | null {
     shots,
     look,
     scenes: [intro, outro].filter((s): s is Scene => s !== undefined),
+    captions: (Array.isArray(r.captions) ? r.captions : []).map((c) => text(c, 120)).filter(Boolean).slice(0, PLAN_MAX_CAPTIONS),
     prep: (Array.isArray(r.prep) ? r.prep : []).map((p) => text(p, 160)).filter(Boolean).slice(0, PLAN_MAX_PREP)
   }
 }
@@ -172,6 +176,7 @@ const SHAPE = `{
     { "kind": "intro", "style": "calm" | "bold", "title": "…", "subtitle": "…", "steps": ["…"], "durationSec": 3 },
     { "kind": "outro", "style": "calm" | "bold", "title": "…", "subtitle": "…", "durationSec": 2.5 }
   ],
+  "captions": ["one short on-screen caption per step, in order"],
   "prep": ["things to do before pressing Record"]
 }`
 
@@ -188,6 +193,8 @@ export function planPrompt(context: PlanContext, history: readonly PlanTurn[]): 
   return `You are helping plan a screen recording in ScreenPolish, a screen recorder that zooms toward every click on its own, draws a clean pointer, frames the take on a background, and can add an animated intro and outro card.
 
 Plan the recording the user describes. Be concrete and brief: pick the angle that keeps the important thing large (a window or region beats a whole ultrawide screen), a length that fits where it will be posted (social clips 15–60 s), a shot list a person can follow while recording, a look, and the cards. Don't use tools; just answer.
+
+Also write the captions the viewer will read: one line per step, in the order of the shots, each under 60 characters, in plain words that say what is happening or why it matters ("Open Footprint", "The biggest folders are on the left"). ScreenPolish shows each line as the user clicks to the next step, so write them for someone watching without sound.
 
 What this machine can record:
 Screens:
@@ -206,6 +213,8 @@ ${SHAPE}`
 /** What a plan sets on the take itself once it is recorded: its cards, background and shape. */
 export interface PlanTakeLook {
   scenes: Scene[]
+  /** Caption lines for the take, timed to its clicks when the editor first opens it. */
+  captions?: string[]
   background?: [string, string]
   aspect?: PlanAspect
 }
@@ -213,6 +222,7 @@ export interface PlanTakeLook {
 export function takeLookOf(plan: RecordPlan): PlanTakeLook {
   return {
     scenes: plan.scenes,
+    ...(plan.captions.length ? { captions: plan.captions } : {}),
     ...(plan.look.background ? { background: plan.look.background } : {}),
     ...(plan.look.aspect ? { aspect: plan.look.aspect } : {})
   }
@@ -224,8 +234,10 @@ export function normalizeTakeLook(raw: unknown): PlanTakeLook | null {
   const r = raw as Record<string, unknown>
   const bg = Array.isArray(r.background) ? r.background.filter((c): c is string => typeof c === 'string' && HEX.test(c)) : []
   const aspect = oneOf(r.aspect, ['16:9', '9:16', '1:1', '4:5', '4:3'] as const)
+  const captions = (Array.isArray(r.captions) ? r.captions : []).map((c) => text(c, 120)).filter(Boolean).slice(0, PLAN_MAX_CAPTIONS)
   return {
     scenes: normalizeScenes(r.scenes).slice(0, 2),
+    ...(captions.length ? { captions } : {}),
     ...(bg.length >= 2 ? { background: [bg[0]!, bg[1]!] as [string, string] } : {}),
     ...(aspect ? { aspect } : {})
   }

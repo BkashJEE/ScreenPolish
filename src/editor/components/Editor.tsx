@@ -123,6 +123,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
   const { project, setProject, undo, redo, canUndo, canRedo, beginBatch, endBatch } = useProjectHistory(loaded.project)
   // Click timing moves the whole input log against the picture; everything below uses the moved log.
   const events = useMemo(() => syncEvents(recordedEvents, project.cursor.syncSec), [recordedEvents, project.cursor.syncSec])
+  const clickTimes = useMemo(() => events.clicks.filter((c) => c.down).map((c) => c.t / 1000), [events])
   // Clean up voice swaps the microphone for its cleaned copy everywhere it is played or exported.
   const [cleanMicUrl, setCleanMicUrl] = useState(urls.micClean)
   const media = useMemo(() => withCleanVoice(project, urls, cleanMicUrl), [project, urls, cleanMicUrl])
@@ -523,6 +524,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
             onProject={onProject}
             files={files}
             audioUrls={{ mic: media.mic, system: media.system }}
+            clickTimes={clickTimes}
             hasCleanMic={!!cleanMicUrl}
             onCleanMic={async () => setCleanMicUrl(await window.polish.cleanMic(files.folder))}
             outSize={outSize}
