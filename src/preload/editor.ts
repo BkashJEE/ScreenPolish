@@ -29,6 +29,16 @@ const bridge: EditorBridge = {
   openMusicFolder: () => ipcRenderer.invoke(EDITOR.openMusicFolder),
   listBackgrounds: () => ipcRenderer.invoke(EDITOR.listBackgrounds),
   importVideo: () => ipcRenderer.invoke(EDITOR.importVideo),
+  sequenceCreate: (takes, title) => ipcRenderer.invoke(EDITOR.sequenceCreate, takes, title),
+  sequenceLoad: (folder) => ipcRenderer.invoke(EDITOR.sequenceLoad, folder),
+  sequenceSave: (folder, sequence) => ipcRenderer.invoke(EDITOR.sequenceSave, folder, sequence),
+  sequenceJoin: (request) => ipcRenderer.invoke(EDITOR.sequenceJoin, request),
+  onSequenceJoinProgress: (handler) => {
+    const listener = (_e: unknown, fraction: number) => handler(fraction)
+    ipcRenderer.on(EDITOR.sequenceJoinProgress, listener)
+    return () => ipcRenderer.removeListener(EDITOR.sequenceJoinProgress, listener)
+  },
+  isSequence: (folder) => ipcRenderer.invoke(EDITOR.isSequence, folder),
   saveCaptions: (folder, name, text) => ipcRenderer.invoke(EDITOR.saveCaptions, folder, name, text),
   listLooks: () => ipcRenderer.invoke(EDITOR.listLooks),
   cleanMic: (folder) => ipcRenderer.invoke(EDITOR.cleanMic, folder),

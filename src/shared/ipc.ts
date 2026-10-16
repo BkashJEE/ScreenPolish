@@ -133,6 +133,16 @@ export interface SetCoverRequest {
   data: ArrayBuffer
 }
 
+/** A sequence and what it needs to know about its takes. */
+export interface LoadedSequence {
+  folder: string
+  sequence: import('./sequence').Sequence
+  /** The sequence's parts folder, where its export renders each clip. */
+  partsDir: string
+  /** One per clip, in clip order. */
+  takes: Array<{ take: string; folder: string; title?: string; thumbnail?: string; missing?: boolean }>
+}
+
 export interface LoadedProject {
   files: RecordingFiles
   events: RecordingEvents
@@ -166,6 +176,13 @@ export const EDITOR = {
   openMusicFolder: 'polish:music:open-folder',
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
+  sequenceCreate: 'polish:sequence:create',
+  sequenceLoad: 'polish:sequence:load',
+  sequenceSave: 'polish:sequence:save',
+  sequenceJoin: 'polish:sequence:join',
+  isSequence: 'polish:sequence:is',
+  /** main -> editor push while a sequence's clips are joined */
+  sequenceJoinProgress: 'polish:sequence:join-progress',
   saveCaptions: 'polish:captions:save-srt',
   cleanMic: 'polish:audio:clean-mic',
   updateState: 'polish:update:state',
@@ -363,6 +380,15 @@ export interface EditorBridge {
   saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
   importVideo: () => Promise<string | null>
+  /** Make a sequence of these takes (folders in the recordings root), in this order; resolves with its folder. */
+  sequenceCreate: (takes: string[], title?: string) => Promise<string>
+  sequenceLoad: (folder: string) => Promise<LoadedSequence>
+  sequenceSave: (folder: string, sequence: import('./sequence').Sequence) => Promise<import('./sequence').Sequence>
+  /** Join a sequence's rendered clips (files in its parts folder, in clip order) into one MP4; resolves with its path. */
+  sequenceJoin: (request: { folder: string; parts: string[]; name: string }) => Promise<string>
+  /** 0..1 while sequenceJoin runs; returns an unsubscribe. */
+  onSequenceJoinProgress: (handler: (fraction: number) => void) => () => void
+  isSequence: (folder: string) => Promise<boolean>
   /** Pictures in your backgrounds folder, ready to use as a background. */
   listBackgrounds: () => Promise<FolderBackground[]>
   /** Open the backgrounds folder in the file manager, creating it if needed. */

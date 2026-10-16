@@ -26,6 +26,7 @@ import { deleteLookIn, loadShelf, saveLookIn, setDefaultLookIn } from './looks'
 import { CLEAN_MIC_FILE, cleanMic } from './voice-cleanup'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
+import { SEQUENCE_PARTS_DIR, createSequenceFolder, isSequenceFolder, joinSequence, readSequence, saveSequence } from './sequence'
 import { mergeProject, serializeProject } from './project-io'
 import { saveRecordDefaults } from './record-defaults'
 import { getDefaultLook, loadSettings, saveSettings, setRecordingsRoot } from './settings'
@@ -156,7 +157,32 @@ export async function listRecordings(root: string, durationOf: EditorIpcDeps['du
     .filter((f) => exists(path.join(f.folder, 'screen.mp4')))
     .sort((a, b) => b.createdAt - a.createdAt)
 
-  return Promise.all(
+  const sequences = await Promise.all(
+    entries
+      .filter((e) => e.isDirectory() && isRecordingFolderName(e.name) && isSequenceFolder(path.join(root, e.name)))
+      .map(async (e): Promise<RecordingSummary | null> => {
+        const folder = path.join(root, e.name)
+        try {
+          const sequence = readSequence(root, folder)
+          // A sequence shows its first take's picture.
+          const first = sequence.clips[0] ? path.join(root, sequence.clips[0].take) : null
+          return {
+            folder,
+            name: e.name,
+            createdAt: parseFolderName(e.name) ?? 0,
+            durationSec: null,
+            ...(sequence.title ? { title: sequence.title } : {}),
+            ...(first && exists(path.join(first, 'exports', 'thumb.jpg')) ? { thumbnail: mediaUrl(first, 'exports/thumb.jpg') } : {}),
+            sizeBytes: await folderSize(folder),
+            sequence: { clips: sequence.clips.length }
+          }
+        } catch {
+          return null
+        }
+      })
+  )
+
+  const takes = await Promise.all(
     folders.map(async (f) => {
       const thumb = path.join(f.folder, 'exports', 'thumb.jpg')
       const summary: RecordingSummary = {
@@ -179,6 +205,7 @@ export async function listRecordings(root: string, durationOf: EditorIpcDeps['du
       return summary
     })
   )
+  return [...takes, ...sequences.filter((s): s is RecordingSummary => s !== null)].sort((a, b) => b.createdAt - a.createdAt)
 }
 
 export function registerEditorIpc(deps: EditorIpcDeps): void {
@@ -197,6 +224,46 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
   })
 
   ipcMain.handle(EDITOR.list, () => listRecordings(deps.root(), deps.durationOf))
+
+  // Sequences: several takes in one export. See src/main/sequence.ts.
+  ipcMain.handle(EDITOR.isSequence, (_e, folder: string) => {
+    try {
+      return isSequenceFolder(assertInsideRoot(deps.root(), String(folder)))
+    } catch {
+      return false
+    }
+  })
+  ipcMain.handle(EDITOR.sequenceCreate, (_e, takes: unknown, title?: unknown) =>
+    createSequenceFolder(deps.root(), Array.isArray(takes) ? takes.map(String) : [], typeof title === 'string' ? title : '').folder
+  )
+  ipcMain.handle(EDITOR.sequenceLoad, (_e, folder: string) => {
+    const root = deps.root()
+    const abs = assertInsideRoot(root, String(folder))
+    const sequence = readSequence(root, abs)
+    const takes = sequence.clips.map((c) => {
+      const takeDir = path.join(root, c.take)
+      if (!exists(path.join(takeDir, 'screen.mp4'))) return { take: c.take, folder: takeDir, missing: true }
+      let title: string | undefined
+      try {
+        title = mergeProject(JSON.parse(fs.readFileSync(path.join(takeDir, 'project.json'), 'utf8'))).title || undefined
+      } catch {
+        // No project yet: the folder name stands in.
+      }
+      return {
+        take: c.take,
+        folder: takeDir,
+        ...(title ? { title } : {}),
+        ...(exists(path.join(takeDir, 'exports', 'thumb.jpg')) ? { thumbnail: mediaUrl(takeDir, 'exports/thumb.jpg') } : {})
+      }
+    })
+    return { folder: abs, sequence, partsDir: path.join(abs, SEQUENCE_PARTS_DIR), takes }
+  })
+  ipcMain.handle(EDITOR.sequenceSave, (_e, folder: string, sequence: unknown) => saveSequence(deps.root(), String(folder), sequence as never))
+  ipcMain.handle(EDITOR.sequenceJoin, (event, request: { folder: string; parts: string[]; name: string }) =>
+    joinSequence(deps.root(), deps.ffmpegPath(), { folder: String(request.folder), parts: (request.parts ?? []).map(String), name: String(request.name ?? 'sequence') }, (f) => {
+      if (!event.sender.isDestroyed()) event.sender.send(EDITOR.sequenceJoinProgress, f)
+    })
+  )
 
   ipcMain.handle(EDITOR.reveal, (_e, target: string) => {
     assertInsideRoot(deps.root(), target)
