@@ -86,7 +86,7 @@ export type WebcamCorner = 'br' | 'bl' | 'tr' | 'tl'
 export type LetteringPosition = 'top-left' | 'top' | 'bottom'
 /** small ≈ half the bitrate and a smaller GIF, high ≈ 1.6x. */
 export type ExportQuality = 'small' | 'balanced' | 'high'
-export type MockupKind = 'none' | 'browser' | 'macos' | 'phone'
+export type MockupKind = 'none' | 'browser' | 'macos' | 'phone' | 'laptop'
 export type MockupTheme = 'dark' | 'light'
 
 /** Non-empty source-space crop, with all values normalized to 0..1. */

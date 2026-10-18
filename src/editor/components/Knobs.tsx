@@ -603,7 +603,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             { value: 'none', label: 'None' },
             { value: 'browser', label: 'Browser' },
             { value: 'macos', label: 'macOS' },
-            { value: 'phone', label: 'Phone' }
+            { value: 'phone', label: 'Phone' },
+            { value: 'laptop', label: 'Laptop' }
           ]}
         />
         {project.mockup.kind !== 'none' && (
@@ -614,21 +615,31 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
                 size="sm"
                 value={project.mockup.theme}
                 onChange={(theme) => set('mockup', { theme })}
-                options={[
-                  { value: 'dark', label: 'Dark' },
-                  { value: 'light', label: 'Light' }
-                ]}
+                options={
+                  project.mockup.kind === 'laptop'
+                    ? [
+                        { value: 'dark', label: 'Space black' },
+                        { value: 'light', label: 'Silver' }
+                      ]
+                    : [
+                        { value: 'dark', label: 'Dark' },
+                        { value: 'light', label: 'Light' }
+                      ]
+                }
               />
             </Row>
-            <Row label="Shell color">
-              <ColorField label="Mockup shell color" value={project.mockup.color} onChange={(color) => set('mockup', { color })} />
-            </Row>
+            {/* The laptop's metal follows its finish above. */}
+            {project.mockup.kind !== 'laptop' && (
+              <Row label="Shell color">
+                <ColorField label="Mockup shell color" value={project.mockup.color} onChange={(color) => set('mockup', { color })} />
+              </Row>
+            )}
             <SliderField label="Corner radius" value={project.mockup.radius} min={0} max={64} step={1} onChange={(radius) => set('mockup', { radius })} format={(v) => `${v} px`} />
             <SliderField
-              label={project.mockup.kind === 'phone' ? 'Bezel' : 'Header'}
+              label={project.mockup.kind === 'phone' || project.mockup.kind === 'laptop' ? 'Bezel' : 'Header'}
               value={project.mockup.headerSize}
-              min={project.mockup.kind === 'phone' ? 0.025 : 0.045}
-              max={project.mockup.kind === 'phone' ? 0.14 : 0.18}
+              min={project.mockup.kind === 'phone' || project.mockup.kind === 'laptop' ? 0.025 : 0.045}
+              max={project.mockup.kind === 'phone' || project.mockup.kind === 'laptop' ? 0.14 : 0.18}
               step={0.005}
               onChange={(headerSize) => set('mockup', { headerSize })}
               format={pct}
