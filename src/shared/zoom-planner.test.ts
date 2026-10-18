@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROJECT, type MouseButton, type Project, type RecordingEvents, type ZoomSegment } from './types'
-import { DEFAULT_ZOOM_PLAN, baseSegmentId, planAutoZoom, resolveZoomSegments, autoStyle } from './zoom-planner'
+import { DEFAULT_ZOOM_PLAN, baseSegmentId, leadInFor, planAutoZoom, resolveZoomSegments, autoStyle } from './zoom-planner'
 import { HOLD_GAP_SEC, cameraAt } from './camera'
 
 const region = { x: 0, y: 0, width: 1920, height: 1080, scale: 1 }
@@ -267,7 +267,7 @@ describe('resolveZoomSegments', () => {
       ['auto-0~2', 'auto'],
       ['auto-1', 'auto']
     ])
-    expect(segs[0].start).toBeCloseTo(4.5)
+    expect(segs[0].start).toBeCloseTo(5 - leadInFor(DEFAULT_PROJECT.zoom.easeSec))
     expect(segs[0].end).toBe(5)
     expect(segs[1]).toMatchObject({ start: 5, end: 5.5, x: 10, y: 10, scale: 3 })
     expect(segs[2].start).toBe(5.5)
@@ -381,5 +381,22 @@ describe('clicks too far apart to share a view', () => {
     const removedOne = resolveZoomSegments(project({ removedAuto: ['auto-0'] }), events, 60)
     expect(removedOne).toHaveLength(0)
     expect(resolveZoomSegments(project({ removedAuto: [] }), events, 60)).toHaveLength(2)
+  })
+})
+
+describe('zooms start early enough to be in when the click lands', () => {
+  const events = makeEvents({ clicks: [click(10_000, 800, 500)] })
+
+  it('lead by most of their ease, never less than half a second', () => {
+    expect(leadInFor(1)).toBeCloseTo(0.9)
+    expect(leadInFor(0.4)).toBe(0.5)
+    const glide = resolveZoomSegments(project({ easeSec: 1 }), events, 30)
+    expect(glide[0]!.start).toBeCloseTo(9.1)
+  })
+
+  it('keep the old lead in a project that removed automatic zooms', () => {
+    const two = makeEvents({ clicks: [click(10_000, 800, 500), click(20_000, 800, 500)] })
+    const segs = resolveZoomSegments(project({ easeSec: 1, removedAuto: ['auto-1'] }), two, 30)
+    expect(segs[0]!.start).toBeCloseTo(9.5)
   })
 })

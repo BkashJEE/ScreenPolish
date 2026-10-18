@@ -28,6 +28,15 @@ export interface ZoomPlanConfig {
   keepApart: boolean
 }
 
+/**
+ * How early a zoom starts, given how long the camera takes to ease in: early
+ * enough to be about 90% of the way in when the click lands, so the click is
+ * seen up close rather than chased. Never less than the default half second.
+ */
+export function leadInFor(easeSec: number): number {
+  return Math.max(DEFAULT_ZOOM_PLAN.leadInSec, (Number.isFinite(easeSec) ? easeSec : 0) * 0.9)
+}
+
 export const DEFAULT_ZOOM_PLAN: ZoomPlanConfig = {
   motion: 'cinematic',
   scale: 2,
@@ -298,7 +307,13 @@ export function resolveZoomSegments(
   const removed = new Set(zoom.removedAuto.map(baseSegmentId))
   let auto: ZoomSegment[] = zoom.auto
     ? // A project that removed automatic zooms keeps the plan its removals were made against.
-      planAutoZoom(events, duration, { scale: zoom.scale, motion: zoom.motion ?? 'cinematic', keepApart: removed.size === 0 }).filter((s) => !removed.has(s.id))
+      // Such a project also keeps the old half-second lead-in, which its plan was made with.
+      planAutoZoom(events, duration, {
+        scale: zoom.scale,
+        motion: zoom.motion ?? 'cinematic',
+        keepApart: removed.size === 0,
+        ...(removed.size === 0 ? { leadInSec: leadInFor(zoom.easeSec ?? 0.6) } : {})
+      }).filter((s) => !removed.has(s.id))
     : []
 
   let manual: ZoomSegment[] = []
