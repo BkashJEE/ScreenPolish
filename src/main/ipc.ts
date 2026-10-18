@@ -26,6 +26,7 @@ import { deleteLookIn, loadShelf, saveLookIn, setDefaultLookIn } from './looks'
 import { CLEAN_MIC_FILE, cleanMic } from './voice-cleanup'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
+import { saveVoiceover, voiceoverFile } from './voiceover'
 import { mergeProject, serializeProject } from './project-io'
 import { saveRecordDefaults } from './record-defaults'
 import { getDefaultLook, loadSettings, saveSettings, setRecordingsRoot } from './settings'
@@ -275,6 +276,20 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
       }
     })
   })
+  // Voiceover: save what the editor recorded beside the take, and transcribe it for captions.
+  ipcMain.handle(EDITOR.saveVoiceover, (_e, folder: string, data: ArrayBuffer) =>
+    saveVoiceover(deps.ffmpegPath(), assertInsideRoot(deps.root(), String(folder)), new Uint8Array(data))
+  )
+  ipcMain.handle(EDITOR.transcribeVoiceover, (event, folder: string, file: string) =>
+    transcribe({
+      audioFile: voiceoverFile(assertInsideRoot(deps.root(), String(folder)), String(file)),
+      ffmpeg: deps.ffmpegPath(),
+      whisper: deps.whisper(),
+      onProgress: (fraction) => {
+        if (!event.sender.isDestroyed()) event.sender.send(EDITOR.transcribeProgress, fraction)
+      }
+    })
+  )
   ipcMain.handle(EDITOR.exportChunk, (_e, exportId: string, position: number, data: ArrayBuffer) => {
     exportSink.chunk(exportId, position, data)
   })

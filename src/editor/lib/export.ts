@@ -433,7 +433,10 @@ export async function exportProject(args: ExportArgs): Promise<{ path: string }>
       audioSpeedSpans: project.preserveAudioPitch !== false ? spansWithScenes(timeline.map(span => ({start:span.outputStart,end:span.outputEnd,rate:span.rate})), scenes) : undefined,
       fps: args.kind === 'gif' ? gifFps(quality, project.output.gif?.fps) : undefined,
       width: args.kind === 'gif' ? gifWidth(size.width, quality, project.output.gif?.width) : undefined,
-      loop: args.kind === 'gif' ? project.output.gif?.loop !== false : undefined
+      loop: args.kind === 'gif' ? project.output.gif?.loop !== false : undefined,
+      ...(args.kind === 'mp4' && project.voiceover?.length
+        ? { voiceover: project.voiceover.map((v) => ({ file: v.file, atSec: v.atSec, volume: v.volume * (project.audio.masterVolume ?? 1) })), duckUnderVoice: project.audio.duckUnderVoice !== false }
+        : {})
     })
     report(1)
     return { path: done.path }

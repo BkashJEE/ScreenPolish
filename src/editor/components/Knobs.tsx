@@ -24,6 +24,7 @@ import { ImageIcon, Trash, Undo, X } from './icons'
 import { SilencePanel } from './SilencePanel'
 import { CaptionsPanel } from './CaptionsPanel'
 import { LooksPanel } from './LooksPanel'
+import { VoiceoverPanel, type VoiceoverControls } from './Voiceover'
 import { ScenesPanel } from './ScenesPanel'
 import { INSPECTOR_TABS, inspectorTabCss, type InspectorTab } from '../lib/inspector-tabs'
 import { Button, Chip, ColorField, Kbd, NumberField, Row, Section, Segmented, Select, SliderField, Toggle, cx } from './ui'
@@ -49,6 +50,8 @@ export interface KnobsProps {
   audioUrls?: { mic?: string; system?: string }
   /** Source seconds of each mouse press, for timing a caption script to the steps. */
   clickTimes?: number[]
+  /** Recording a voiceover over the take; absent where the editor cannot record. */
+  voiceover?: VoiceoverControls
   /** Source seconds at which each step of a guided take began. */
   stepMarks?: number[]
   /** Whether the cleaned-up microphone has been made for this recording. */
@@ -1001,6 +1004,13 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           stepMarks={props.stepMarks}
         />
       </Section>
+
+      {/* Voiceover ---------------------------------------------------------- */}
+      {props.voiceover && (
+        <Section title="Voiceover" right={project.voiceover?.length ? <Chip tone="ok">{project.voiceover.length}</Chip> : undefined}>
+          <VoiceoverPanel controls={props.voiceover} project={project} onProject={onProject} />
+        </Section>
+      )}
 
       {/* Audio -------------------------------------------------------------- */}
       <Section title="Audio">

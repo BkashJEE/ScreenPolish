@@ -25,6 +25,7 @@ import { AppearancePicker } from './AppearancePicker'
 import { CropEditor } from './CropEditor'
 import { Overlays } from './Overlays'
 import { Preview } from './Preview'
+import { VoiceoverPlayer, useVoiceover } from './Voiceover'
 import { ScrubBar } from './ScrubBar'
 import { ThumbnailSheet } from './ThumbnailSheet'
 import { Transport } from './Transport'
@@ -133,6 +134,10 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
   const [duration, setDuration] = useState<number>(NaN)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [canCaption, setCanCaption] = useState(false)
+  useEffect(() => {
+    void window.polish.captionsStatus().then((s) => setCanCaption(s.installed), () => setCanCaption(false))
+  }, [])
   const [selectedZoomId, setSelectedZoomId] = useState<string | null>(null)
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
@@ -145,6 +150,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
 
   const saveStatus = useDebouncedSave(folder, project, loaded.project)
   const onProject = useCallback((update: (p: Project) => Project) => setProject((p) => update(p)), [])
+  const voiceover = useVoiceover({ folder, project, onProject, time, playing, setPlaying, duration, canCaption })
 
   const hasDuration = Number.isFinite(duration) && duration > 0
   const trim = useMemo(() => resolveTrim(project.trim, hasDuration ? duration : 0), [project.trim, duration, hasDuration])
@@ -452,10 +458,11 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="editor-stage-shell relative min-h-0 flex-1 bg-bg-0">
             <div className="absolute inset-6">
+              <VoiceoverPlayer clips={project.voiceover ?? []} screenUrl={media.screen} outputTime={voiceover.outputTime} playing={playing} muted={voiceover.recording} master={project.audio.masterVolume ?? 1} />
               <Preview
                 urls={media}
                 events={events}
-                project={project}
+                project={voiceover.previewProject}
                 segments={segments}
                 pointerPath={pointerPath}
                 backgroundImage={backgroundImage}
@@ -527,6 +534,7 @@ function LoadedEditor({ loaded, onBack }: { loaded: LoadedProject; onBack: () =>
             files={files}
             audioUrls={{ mic: media.mic, system: media.system }}
             clickTimes={clickTimes}
+            voiceover={voiceover.controls}
             stepMarks={stepMarks}
             hasCleanMic={!!cleanMicUrl}
             onCleanMic={async () => setCleanMicUrl(await window.polish.cleanMic(files.folder))}

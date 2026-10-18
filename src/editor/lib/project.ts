@@ -1,5 +1,6 @@
 // Immutable Project editing helpers and presets. Pure, tested.
 
+import { normalizeVoiceover } from '../../shared/voiceover'
 import { BRAND_THEMES } from '../../brand'
 import { clampSync } from '../../shared/input-sync'
 import { normalizeScenes } from '../../shared/scenes'
@@ -72,6 +73,7 @@ export function normalizeProject(raw: Partial<Project> | null | undefined): Proj
     splits: Array.isArray(p.splits) ? p.splits.filter((t) => Number.isFinite(t)) : [],
     cutTransition: normalizeCutTransition(p.cutTransition),
     captions: normalizeCaptions(p.captions),
+    voiceover: normalizeVoiceover(p.voiceover),
     preserveAudioPitch: p.preserveAudioPitch !== false,
     crop: normalizeCrop(p.crop),
     audioRegions: Array.isArray(p.audioRegions) ? p.audioRegions.filter((r) => typeof r.path === 'string' && Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start).map((r) => ({ ...r })) : [],
