@@ -100,6 +100,10 @@ export interface ExportEndRequest {
   width?: number
   /** For GIF: false plays once; absent or true loops forever. */
   loop?: boolean
+  /** Voiceover clips to lay over the MP4, on its own clock: files in the take's folder. */
+  voiceover?: Array<{ file: string; atSec: number; volume: number }>
+  /** Lower the take's sound while a voiceover plays; absent = yes. */
+  duckUnderVoice?: boolean
 }
 
 export interface ExportEndResponse {
@@ -169,6 +173,8 @@ export const EDITOR = {
   openMusicFolder: 'polish:music:open-folder',
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
+  saveVoiceover: 'polish:voiceover:save',
+  transcribeVoiceover: 'polish:voiceover:transcribe',
   guideState: 'polish:guide:state',
   guideMove: 'polish:guide:move',
   /** main -> editor push while a guided take records */
@@ -370,6 +376,10 @@ export interface EditorBridge {
   saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
   importVideo: () => Promise<string | null>
+  /** Save a voiceover the editor recorded (WebM/Opus) beside the take; resolves with its file name and length. */
+  saveVoiceover: (folder: string, data: ArrayBuffer) => Promise<{ file: string; durationSec: number }>
+  /** Transcribe one voiceover file of a take; times are seconds into that file. Progress comes through onTranscribeProgress. */
+  transcribeVoiceover: (folder: string, file: string) => Promise<CaptionCue[]>
   /** The recording guide of the take being recorded, or null. */
   guideState: () => Promise<GuideView | null>
   /** The guide's Next and Back buttons. */

@@ -6,6 +6,7 @@ import type { CutTransition } from './cut-transition'
 import type { CaptionSettings } from './captions'
 import { DEFAULT_CLICK_SOUND, type ClickSoundSettings } from './click-sound'
 import { DEFAULT_ZOOM_SOUND, type ZoomSoundSettings } from './zoom-sound'
+import type { VoiceoverClip } from './voiceover'
 // Shared data contracts. Everything the recorder writes and the editor reads is
 // described here. See docs/superpowers/specs/2026-09-01-polish-design.md.
 
@@ -245,8 +246,10 @@ export interface Project {
     /** 0..1 strength of the drop shadow; absent = 1. */
     shadow?: number
   }
-  audio: { mic: boolean; system: boolean; micVolume: number; systemVolume: number; masterVolume: number; /** Play and export the cleaned-up microphone (mic.clean.m4a) instead of the original. */ micClean?: boolean; /** Legacy on/off from early window-tracking builds; migrated into cursor.clickSound. */ clickSounds?: boolean }
+  audio: { mic: boolean; system: boolean; micVolume: number; systemVolume: number; masterVolume: number; /** Play and export the cleaned-up microphone (mic.clean.m4a) instead of the original. */ micClean?: boolean; /** Lower the take's other sound while a voiceover plays; absent = on. */ duckUnderVoice?: boolean; /** Legacy on/off from early window-tracking builds; migrated into cursor.clickSound. */ clickSounds?: boolean }
   overlays: Overlay[]
+  /** Voice recorded over the take afterwards, on its output clock. See shared/voiceover.ts. */
+  voiceover?: VoiceoverClip[]
   /** Animated cards before and after the recording. See shared/scenes.ts. */
   scenes: Scene[]
 }
@@ -273,6 +276,7 @@ export const DEFAULT_PROJECT: Project = {
   webcam: { enabled: true, corner: 'br', size: 0.22, round: true, look: { ...DEFAULT_WEBCAM_LOOK } },
   audio: { mic: true, system: true, micVolume: 1, systemVolume: 1, masterVolume: 1 },
   overlays: [],
+  voiceover: [],
   scenes: []
 }
 

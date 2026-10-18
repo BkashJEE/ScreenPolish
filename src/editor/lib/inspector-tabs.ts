@@ -8,7 +8,7 @@ export const INSPECTOR_TABS = [
   { id: 'timeline', label: 'Timeline', sections: ['Title cards', 'Cuts', 'Speed regions'] },
   { id: 'motion', label: 'Motion', sections: ['Entrance', 'Cursor', 'Zoom'] },
   { id: 'layers', label: 'Layers', sections: ['Webcam', 'Layers', 'Captions'] },
-  { id: 'audio', label: 'Audio', sections: ['Audio'] }
+  { id: 'audio', label: 'Audio', sections: ['Voiceover', 'Audio'] }
 ] as const
 
 export type InspectorTab = (typeof INSPECTOR_TABS)[number]['id']

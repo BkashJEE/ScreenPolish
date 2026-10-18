@@ -138,6 +138,10 @@ export async function installMockBridge(): Promise<void> {
     openMusicFolder: async () => console.info('[mock] openMusicFolder'),
     listBackgrounds: async () => [],
     importVideo: async () => null,
+    saveVoiceover: async () => {
+      throw new Error('Voiceover needs the app')
+    },
+    transcribeVoiceover: async () => [],
     guideState: async () => null,
     guideMove: async () => undefined,
     onGuideChanged: () => () => undefined,
