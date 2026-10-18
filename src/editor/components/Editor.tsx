@@ -41,7 +41,7 @@ function projectForDevPreview(project: Project): Project {
   const backgroundKind = params.get('background')
   const colorParam = params.get('color')
   const solidColor = colorParam && /^[0-9a-f]{6}$/i.test(colorParam.replace(/^#/, '')) ? `#${colorParam.replace(/^#/, '')}` : '#39445f'
-  const nextKind = kind === 'browser' || kind === 'macos' || kind === 'phone' || kind === 'none' ? (kind as MockupKind) : project.mockup.kind
+  const nextKind = kind === 'browser' || kind === 'macos' || kind === 'phone' || kind === 'laptop' || kind === 'none' ? (kind as MockupKind) : project.mockup.kind
   const nextHeight = height === 720 || height === 1080 || height === 1440 || height === 2160 ? height : project.output.height
   const nextBackground = backgroundKind === 'solid' ? { ...project.background, kind: 'solid' as const, colors: [solidColor], angle: 0 } : project.background
   if (nextKind === project.mockup.kind && nextHeight === project.output.height && nextBackground === project.background) return project
