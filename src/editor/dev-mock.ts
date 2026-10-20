@@ -138,6 +138,18 @@ export async function installMockBridge(): Promise<void> {
     openMusicFolder: async () => console.info('[mock] openMusicFolder'),
     listBackgrounds: async () => [],
     importVideo: async () => null,
+    sequenceCreate: async () => {
+      throw new Error('Sequences need the app')
+    },
+    sequenceLoad: async () => {
+      throw new Error('Sequences need the app')
+    },
+    sequenceSave: async (_f, s) => s,
+    sequenceJoin: async () => {
+      throw new Error('Sequences need the app')
+    },
+    onSequenceJoinProgress: () => () => undefined,
+    isSequence: async () => false,
     saveVoiceover: async () => {
       throw new Error('Voiceover needs the app')
     },

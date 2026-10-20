@@ -11,9 +11,11 @@
 //   polish replay save
 //   polish replay stop
 //   polish open [FOLDER]
+//   polish sequence create [--out NAME] TAKE TAKE...
 //
 // Every command prints one JSON object on stdout and exits 0 on success, 1 on
-// failure. FOLDER is an absolute path or a recording name under the library.
+// failure. FOLDER is an absolute path or a recording name under the library,
+// or a sequence's name.
 
 import type { ExportKind } from '@shared/ipc'
 
@@ -43,11 +45,12 @@ export type CliCommand =
   | { kind: 'replay-save' }
   | { kind: 'replay-stop' }
   | { kind: 'open'; folder: string | null }
+  | { kind: 'sequence-create'; takes: string[]; title: string | null }
   | { kind: 'quit' }
 
 export const DEFAULT_START: StartOptions = { display: 'primary', region: null, mic: false, system: true, webcam: false, fps: 30 }
 
-const COMMAND_WORDS = new Set(['status', 'list', 'record', 'replay', 'clip', 'export', 'open', 'quit', 'help', '--help', '-h'])
+const COMMAND_WORDS = new Set(['status', 'list', 'record', 'replay', 'clip', 'export', 'open', 'sequence', 'quit', 'help', '--help', '-h'])
 
 /** True when argv (already stripped of the executable) starts a CLI command. */
 export function looksLikeCli(args: readonly string[]): boolean {
@@ -90,6 +93,8 @@ export const HELP = `polish — screen recorder with automatic polish
   polish replay save                                write what is held to a clip
   polish replay stop                                stop holding
   polish open [FOLDER]
+  polish sequence create [--out NAME] TAKE TAKE...   one video from several takes, in order;
+                                                    then: polish export NAME
   polish quit                              stop the tray app (refused while recording)
 
 Output is one JSON object per command. Exit code 0 on success, 1 on failure.
@@ -241,6 +246,22 @@ export function parseCli(argv: readonly string[]): CliCommand {
     }
     case 'open':
       return { kind: 'open', folder: tail[0] ?? null }
+    case 'sequence': {
+      const [sub, ...opts] = tail
+      if (sub !== 'create') throw new CliUsageError('sequence expects create')
+      let title: string | null = null
+      const takes: string[] = []
+      for (let i = 0; i < opts.length; i += 1) {
+        const a = opts[i]!
+        if (a === '--out' || a === '--name') {
+          title = takeValue(opts, i, a)
+          i += 1
+        } else if (a.startsWith('--')) throw new CliUsageError(`Unknown option ${a}`)
+        else takes.push(a)
+      }
+      if (takes.length === 0) throw new CliUsageError('sequence create needs one or more takes, in order')
+      return { kind: 'sequence-create', takes, title }
+    }
     case 'quit':
       return { kind: 'quit' }
     default:
@@ -263,8 +284,9 @@ export function replyTimeoutMs(command: CliCommand): number {
       return 60 * 1000
     case 'record-stop':
       return 60 * 1000 + (command.export.kind ? 10 * 60 * 1000 : 0)
+    // A sequence renders every take it uses, then joins them.
     case 'export':
-      return 15 * 60 * 1000
+      return 60 * 60 * 1000
     default:
       return 30 * 1000
   }

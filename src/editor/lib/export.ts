@@ -52,6 +52,8 @@ export interface ExportArgs {
   backgroundImage?: CanvasImageSource | null
   /** Already-decoded image overlays keyed by path; loaded from the paths otherwise. */
   overlayImages?: Map<string, CanvasImageSource>
+  /** Folder to write into instead of the recording's exports folder (a sequence's clips). */
+  into?: string
 }
 
 export class ExportCancelled extends Error {
@@ -298,7 +300,7 @@ export async function exportProject(args: ExportArgs): Promise<{ path: string }>
     }
     throwIfAborted(signal)
 
-    const begin = await window.polish.exportBegin({ folder: args.folder, kind: args.kind, name: args.name })
+    const begin = await window.polish.exportBegin({ folder: args.folder, kind: args.kind, name: args.name, ...(args.into ? { into: args.into } : {}) })
     exportId = begin.exportId
     const id = exportId
 

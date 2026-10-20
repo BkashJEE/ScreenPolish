@@ -81,6 +81,11 @@ export interface ExportBeginRequest {
   kind: ExportKind
   /** Base file name without extension. */
   name: string
+  /**
+   * Write into this folder instead of the recording's exports folder. Must be
+   * inside the recordings root; a sequence renders its clips here.
+   */
+  into?: string
 }
 
 export interface ExportBeginResponse {
@@ -132,6 +137,16 @@ export interface SetCoverRequest {
   data: ArrayBuffer
 }
 
+/** A sequence and what it needs to know about its takes. */
+export interface LoadedSequence {
+  folder: string
+  sequence: import('./sequence').Sequence
+  /** The sequence's parts folder, where its export renders each clip. */
+  partsDir: string
+  /** One per clip, in clip order. */
+  takes: Array<{ take: string; folder: string; title?: string; thumbnail?: string; missing?: boolean }>
+}
+
 /** What the recording guide shows while a planned take records. */
 export interface GuideView {
   steps: import('./recording-guide').GuideStep[]
@@ -173,6 +188,13 @@ export const EDITOR = {
   openMusicFolder: 'polish:music:open-folder',
   listBackgrounds: 'polish:backgrounds:list',
   importVideo: 'polish:recordings:import-video',
+  sequenceCreate: 'polish:sequence:create',
+  sequenceLoad: 'polish:sequence:load',
+  sequenceSave: 'polish:sequence:save',
+  sequenceJoin: 'polish:sequence:join',
+  isSequence: 'polish:sequence:is',
+  /** main -> editor push while a sequence's clips are joined */
+  sequenceJoinProgress: 'polish:sequence:join-progress',
   saveVoiceover: 'polish:voiceover:save',
   transcribeVoiceover: 'polish:voiceover:transcribe',
   guideState: 'polish:guide:state',
@@ -376,6 +398,15 @@ export interface EditorBridge {
   saveCaptions: (folder: string, name: string, text: string) => Promise<string>
   /** Pick a video made elsewhere and bring it in as a recording; resolves with its folder, or null if cancelled. */
   importVideo: () => Promise<string | null>
+  /** Make a sequence of these takes (folders in the recordings root), in this order; resolves with its folder. */
+  sequenceCreate: (takes: string[], title?: string) => Promise<string>
+  sequenceLoad: (folder: string) => Promise<LoadedSequence>
+  sequenceSave: (folder: string, sequence: import('./sequence').Sequence) => Promise<import('./sequence').Sequence>
+  /** Join a sequence's rendered clips (files in its parts folder, in clip order) into one MP4; resolves with its path. */
+  sequenceJoin: (request: { folder: string; parts: string[]; name: string }) => Promise<string>
+  /** 0..1 while sequenceJoin runs; returns an unsubscribe. */
+  onSequenceJoinProgress: (handler: (fraction: number) => void) => () => void
+  isSequence: (folder: string) => Promise<boolean>
   /** Save a voiceover the editor recorded (WebM/Opus) beside the take; resolves with its file name and length. */
   saveVoiceover: (folder: string, data: ArrayBuffer) => Promise<{ file: string; durationSec: number }>
   /** Transcribe one voiceover file of a take; times are seconds into that file. Progress comes through onTranscribeProgress. */

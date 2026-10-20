@@ -99,6 +99,22 @@ app.
 | MP4 and GIF | Up to 2160p at 60 fps, in 16:9, 9:16, 1:1, 4:5, 4:3 or the source shape |
 | GIF choices | 10 to 25 fps, 480 to 1280 px wide, looping or played once |
 
+## Sequences
+
+One video from several takes, one after another. Each take keeps its own
+look, zooms, cuts and captions; a sequence only orders them and joins them.
+See [sequence.md](sequence.md).
+
+| Feature | What you can do |
+| --- | --- |
+| Make a sequence | In the library, pick takes in the order they should play |
+| Clip strip | Reorder clips by dragging, remove them, open a take in the normal editor |
+| In and out | Start or end any clip at the playhead, or play the whole take |
+| Hand-over | A hard cut or a half-second crossfade into the next clip |
+| Preview | Plays through every clip, switching takes at each boundary |
+| Export | One MP4: each take rendered as it would export on its own, at the first take's shape, then joined |
+| Command line | `polish sequence create --out NAME TAKE TAKE...`, then `polish export NAME` |
+
 ## Library and workflow
 
 - Recordings keep their own folder: sources, `events.json`, `project.json` and exports.
@@ -107,7 +123,7 @@ app.
 - **Open a video** made elsewhere (OBS, a phone, another recorder) and edit it
   like any take; zooms are added by hand, since it has no click log.
 - The recordings folder is a setting.
-- `record`, `clip` and `export` from the command line, each answering with JSON.
+- `record`, `clip`, `export` and `sequence create` from the command line, each answering with JSON.
 
 ## What differs by platform
 
