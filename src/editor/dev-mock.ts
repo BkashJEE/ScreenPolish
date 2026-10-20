@@ -150,6 +150,13 @@ export async function installMockBridge(): Promise<void> {
     },
     onSequenceJoinProgress: () => () => undefined,
     isSequence: async () => false,
+    saveVoiceover: async () => {
+      throw new Error('Voiceover needs the app')
+    },
+    transcribeVoiceover: async () => [],
+    guideState: async () => null,
+    guideMove: async () => undefined,
+    onGuideChanged: () => () => undefined,
     saveCaptions: async (_folder, name) => `/mock/exports/${name}.srt`,
     listLooks: async () => ({ presets: [], defaultId: null }),
     cleanMic: async () => 'polish://media/mock/mic.clean.m4a',

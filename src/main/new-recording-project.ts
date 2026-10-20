@@ -32,13 +32,23 @@ export function newRecordingProject(args: { title: string; fps: 30 | 60; cursorS
     // New recordings tick on every mouse press, and glide fast pointer moves; both per project under Cursor.
     cursor: { ...DEFAULT_PROJECT.cursor, style: pointer, glide: 0.5, clickSound: { ...DEFAULT_CLICK_SOUND, enabled: true } }
   }
-  const styled = args.style ? applyLook(base, args.style) : base
+  const looked = args.style ? applyLook(base, args.style) : base
+  // A look that styles captions wants them: the editor transcribes the take the first time it opens it.
+  const styled = args.style?.captions.style && looked.captions ? { ...looked, captions: { ...looked.captions, auto: true } } : looked
+  // Captions planned before the take become its script. A plan with steps is
+  // recorded with the guide, which marks when each step began: line N is step
+  // N's caption, timed to that mark. Otherwise the lines follow the clicks.
+  const guided = !!look?.steps?.some((s) => s.caption)
+  const planned = guided ? look!.steps!.map((s) => s.caption ?? '').join('\n') : look?.captions?.length ? look.captions.join('\n') : null
   return {
     ...styled,
     // A planned take is named by its intro card rather than the window it caught.
     title: intro?.title || args.title,
     output: { ...styled.output, ...(look?.aspect ? { aspect: look.aspect } : {}) },
     ...(look?.background ? { background: { kind: 'gradient' as const, colors: [...look.background], angle: 135 } } : {}),
-    scenes: look?.scenes ?? []
+    scenes: look?.scenes ?? [],
+    ...(planned
+      ? { captions: { ...(styled.captions ?? { enabled: false, cues: [], size: 1, position: 'bottom' as const }), auto: true, script: planned, scriptTiming: guided ? ('steps' as const) : ('clicks' as const) } }
+      : {})
   }
 }

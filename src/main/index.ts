@@ -284,9 +284,14 @@ async function main(): Promise<void> {
     writeStateFile(cliDir(), state, process.pid, session.lastFolder)
     tray?.update(state)
     // Keep the editor out of the shot; openEditor brings it back when the recording lands.
+    // A guided take of a window or region is the exception: the editor shows
+    // the steps beside what is recorded, without taking focus from it.
     if (state.status === 'countdown' || state.status === 'recording') {
       const win = getEditorWindow()
-      if (win?.isVisible()) win.hide()
+      const guided = !!session.nextTakeLook?.steps?.length && session.activeSourceKind !== null && session.activeSourceKind !== 'screen'
+      if (guided) {
+        if (win && !win.isVisible()) win.showInactive()
+      } else if (win?.isVisible()) win.hide()
     }
     // Recording HUD (countdown, timer, stop) and the ghost cursor, both invisible to the capture.
     if (CAN_SHOW_CAPTURE_OVERLAYS && (state.status === 'countdown' || state.status === 'recording')) {

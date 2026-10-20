@@ -11,6 +11,7 @@ import { Warning } from './components/icons'
 import { EmptyState } from './components/ui'
 import { useRecordingState } from './hooks/useRecordingState'
 import { AppearancePicker } from './components/AppearancePicker'
+import { RecordingGuide } from './components/RecordingGuide'
 
 
 type View = { kind: 'library' } | { kind: 'editor'; folder: string }
@@ -86,6 +87,7 @@ function Shell() {
 
   return (
     <div className="polish-shell flex h-full bg-bg-0 text-fg">
+      <RecordingGuide />
       <StudioRail
         active={activeDestination}
         editorAvailable={view.kind === 'editor' || lastEdited !== null}

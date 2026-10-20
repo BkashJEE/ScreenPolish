@@ -105,6 +105,10 @@ export interface ExportEndRequest {
   width?: number
   /** For GIF: false plays once; absent or true loops forever. */
   loop?: boolean
+  /** Voiceover clips to lay over the MP4, on its own clock: files in the take's folder. */
+  voiceover?: Array<{ file: string; atSec: number; volume: number }>
+  /** Lower the take's sound while a voiceover plays; absent = yes. */
+  duckUnderVoice?: boolean
 }
 
 export interface ExportEndResponse {
@@ -141,6 +145,14 @@ export interface LoadedSequence {
   partsDir: string
   /** One per clip, in clip order. */
   takes: Array<{ take: string; folder: string; title?: string; thumbnail?: string; missing?: boolean }>
+}
+
+/** What the recording guide shows while a planned take records. */
+export interface GuideView {
+  steps: import('./recording-guide').GuideStep[]
+  index: number
+  /** False when the whole screen is recorded, where anything shown would be in the video. */
+  onScreen: boolean
 }
 
 export interface LoadedProject {
@@ -183,6 +195,12 @@ export const EDITOR = {
   isSequence: 'polish:sequence:is',
   /** main -> editor push while a sequence's clips are joined */
   sequenceJoinProgress: 'polish:sequence:join-progress',
+  saveVoiceover: 'polish:voiceover:save',
+  transcribeVoiceover: 'polish:voiceover:transcribe',
+  guideState: 'polish:guide:state',
+  guideMove: 'polish:guide:move',
+  /** main -> editor push while a guided take records */
+  guideChanged: 'polish:guide:changed',
   saveCaptions: 'polish:captions:save-srt',
   cleanMic: 'polish:audio:clean-mic',
   updateState: 'polish:update:state',
@@ -389,6 +407,16 @@ export interface EditorBridge {
   /** 0..1 while sequenceJoin runs; returns an unsubscribe. */
   onSequenceJoinProgress: (handler: (fraction: number) => void) => () => void
   isSequence: (folder: string) => Promise<boolean>
+  /** Save a voiceover the editor recorded (WebM/Opus) beside the take; resolves with its file name and length. */
+  saveVoiceover: (folder: string, data: ArrayBuffer) => Promise<{ file: string; durationSec: number }>
+  /** Transcribe one voiceover file of a take; times are seconds into that file. Progress comes through onTranscribeProgress. */
+  transcribeVoiceover: (folder: string, file: string) => Promise<CaptionCue[]>
+  /** The recording guide of the take being recorded, or null. */
+  guideState: () => Promise<GuideView | null>
+  /** The guide's Next and Back buttons. */
+  guideMove: (move: 'next' | 'back') => Promise<void>
+  /** Called when the guide changes (null when the take ends); returns an unsubscribe. */
+  onGuideChanged: (handler: (view: GuideView | null) => void) => () => void
   /** Pictures in your backgrounds folder, ready to use as a background. */
   listBackgrounds: () => Promise<FolderBackground[]>
   /** Open the backgrounds folder in the file manager, creating it if needed. */

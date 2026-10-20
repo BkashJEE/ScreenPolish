@@ -12,7 +12,7 @@ const sources: SourceInfo[] = [
 ] as SourceInfo[]
 
 function plan(overrides: Partial<RecordPlan> = {}): RecordPlan {
-  return { summary: 's', source: { kind: 'screen', reason: '' }, durationSec: 30, shots: [], look: {}, scenes: [], prep: [], ...overrides }
+  return { summary: 's', source: { kind: 'screen', reason: '' }, durationSec: 30, shots: [], look: {}, scenes: [], captions: [], prep: [], ...overrides }
 }
 
 const current = { mic: '', system: true, fps: 30 as const }

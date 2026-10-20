@@ -27,6 +27,7 @@ import { CLEAN_MIC_FILE, cleanMic } from './voice-cleanup'
 import { writeThumbnail } from './thumbnail'
 import { isRecordingFolderName, parseFolderName, sanitizeBaseName, uniqueName } from './naming'
 import { SEQUENCE_PARTS_DIR, createSequenceFolder, isSequenceFolder, joinSequence, readSequence, saveSequence } from './sequence'
+import { saveVoiceover, voiceoverFile } from './voiceover'
 import { mergeProject, serializeProject } from './project-io'
 import { saveRecordDefaults } from './record-defaults'
 import { getDefaultLook, loadSettings, saveSettings, setRecordingsRoot } from './settings'
@@ -342,6 +343,20 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
       }
     })
   })
+  // Voiceover: save what the editor recorded beside the take, and transcribe it for captions.
+  ipcMain.handle(EDITOR.saveVoiceover, (_e, folder: string, data: ArrayBuffer) =>
+    saveVoiceover(deps.ffmpegPath(), assertInsideRoot(deps.root(), String(folder)), new Uint8Array(data))
+  )
+  ipcMain.handle(EDITOR.transcribeVoiceover, (event, folder: string, file: string) =>
+    transcribe({
+      audioFile: voiceoverFile(assertInsideRoot(deps.root(), String(folder)), String(file)),
+      ffmpeg: deps.ffmpegPath(),
+      whisper: deps.whisper(),
+      onProgress: (fraction) => {
+        if (!event.sender.isDestroyed()) event.sender.send(EDITOR.transcribeProgress, fraction)
+      }
+    })
+  )
   ipcMain.handle(EDITOR.exportChunk, (_e, exportId: string, position: number, data: ArrayBuffer) => {
     exportSink.chunk(exportId, position, data)
   })
@@ -388,6 +403,16 @@ export function registerEditorIpc(deps: EditorIpcDeps): void {
 
   // Listing the folder does not create it: only opening it does, so the app
   // never leaves an empty folder in Pictures for someone who never asked.
+  // The recording guide: where it is, and its Next and Back buttons.
+  ipcMain.handle(EDITOR.guideState, () => session.guideView)
+  ipcMain.handle(EDITOR.guideMove, (_e, move: unknown) => {
+    if (move === 'next' || move === 'back') session.moveGuide(move)
+  })
+  session.onGuideChange((view) => {
+    const win = deps.getEditorWindow()
+    if (win && !win.isDestroyed()) win.webContents.send(EDITOR.guideChanged, view)
+  })
+
   ipcMain.handle(EDITOR.importVideo, async (event: IpcMainInvokeEvent) => {
     const parent = BrowserWindow.fromWebContents(event.sender) ?? deps.getEditorWindow() ?? undefined
     const result = await dialog.showOpenDialog(parent as BrowserWindow, {

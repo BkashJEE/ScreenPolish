@@ -39,6 +39,15 @@ const bridge: EditorBridge = {
     return () => ipcRenderer.removeListener(EDITOR.sequenceJoinProgress, listener)
   },
   isSequence: (folder) => ipcRenderer.invoke(EDITOR.isSequence, folder),
+  saveVoiceover: (folder, data) => ipcRenderer.invoke(EDITOR.saveVoiceover, folder, data),
+  transcribeVoiceover: (folder, file) => ipcRenderer.invoke(EDITOR.transcribeVoiceover, folder, file),
+  guideState: () => ipcRenderer.invoke(EDITOR.guideState),
+  guideMove: (move) => ipcRenderer.invoke(EDITOR.guideMove, move),
+  onGuideChanged: (handler) => {
+    const listener = (_e: unknown, view: Parameters<typeof handler>[0]) => handler(view)
+    ipcRenderer.on(EDITOR.guideChanged, listener)
+    return () => ipcRenderer.removeListener(EDITOR.guideChanged, listener)
+  },
   saveCaptions: (folder, name, text) => ipcRenderer.invoke(EDITOR.saveCaptions, folder, name, text),
   listLooks: () => ipcRenderer.invoke(EDITOR.listLooks),
   cleanMic: (folder) => ipcRenderer.invoke(EDITOR.cleanMic, folder),

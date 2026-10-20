@@ -174,8 +174,18 @@ export function PlanPanel({
                 ● Record this plan · {formatTime(plan.durationSec, { fraction: false })}
               </Button>
               <p className="text-[11.5px] leading-[1.45] text-fg-muted">
-                Read the shot list first: this window steps aside while recording. It counts in, records {formatTime(plan.durationSec, { fraction: false })} and stops by
-                itself; the title cards are added to the take.
+                {plan.shots.length || plan.captions.length ? (
+                  <>
+                    Record a window or a region and this window becomes your step guide beside it: what to do now and the caption it gets, moving on with each
+                    click. Stop when you are done; the captions and title cards are added to the take. Recording the whole screen hides the guide, since it
+                    would be in the video.
+                  </>
+                ) : (
+                  <>
+                    Read the shot list first: this window steps aside while recording. It counts in, records {formatTime(plan.durationSec, { fraction: false })} and stops
+                    by itself; the title cards are added to the take.
+                  </>
+                )}
               </p>
             </div>
           )}
@@ -278,6 +288,19 @@ function PlanCard({ plan }: { plan: RecordPlan }) {
             </li>
           ))}
         </ol>
+      )}
+      {plan.captions.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-line pt-2 text-[12px]">
+          <span className="text-fg-muted">Captions, one per click · ready when the take opens</span>
+          <ol className="flex flex-col gap-0.5">
+            {plan.captions.map((c, i) => (
+              <li key={i} className="grid grid-cols-[18px_1fr] gap-1.5">
+                <span className="font-mono text-fg-muted">{i + 1}</span>
+                <span>“{c}”</span>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
       {plan.prep.length > 0 && (
         <ul className="flex flex-col gap-0.5 border-t border-line pt-2 text-[12px] text-fg/80">

@@ -3,6 +3,8 @@ import { DEFAULT_PROJECT } from '@shared/types'
 import { newRecordingProject } from './new-recording-project'
 import { CURSOR_SKINS } from '@shared/ipc'
 import { mergeProject } from './project-io'
+import { builtinLook } from '@shared/builtin-looks'
+import { lookFromProject } from '@shared/presets'
 
 describe('new recording project', () => {
   it('turns click sounds on for new recordings and keeps the recorded fps and cursor skin', () => {
@@ -48,6 +50,19 @@ describe('a planned take', () => {
     expect(mergeProject(JSON.parse(JSON.stringify(p))).scenes).toHaveLength(2)
   })
 
+  it('gets the planned captions as its script, to be timed to its clicks when opened', () => {
+    const p = newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look: { ...look, captions: ['Show the library', 'Open the export sheet'] } })
+    expect(p.captions).toMatchObject({ auto: true, script: 'Show the library\nOpen the export sheet', scriptTiming: 'clicks', cues: [] })
+    expect(mergeProject(JSON.parse(JSON.stringify(p))).captions).toMatchObject({ auto: true, scriptTiming: 'clicks' })
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look }).captions?.script).toBeUndefined()
+  })
+
+  it('with steps, gets one script line per step, timed to the steps the guide marks', () => {
+    const steps = [{ action: 'Open Footprint', caption: 'Open Footprint' }, { action: 'Scroll down' }, { action: 'Press Review', caption: 'Review first' }]
+    const p = newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', look: { ...look, captions: ['Open Footprint', 'Review first'], steps } })
+    expect(p.captions).toMatchObject({ auto: true, script: 'Open Footprint\n\nReview first', scriptTiming: 'steps' })
+  })
+
   it('is an ordinary take without a plan', () => {
     const p = newRecordingProject({ title: 'Firefox', fps: 30, cursorSkin: 'hand', look: null })
     expect(p.scenes).toEqual([])
@@ -68,5 +83,20 @@ describe('the Agent pointer', () => {
     for (const skin of CURSOR_SKINS) expect(newRecordingProject({ title: '', fps: 30, cursorSkin: skin }).cursor.style).toBe(skin)
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'unknown' }).cursor.style).toBe('arrow')
     expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'hand' }).cursor.style).toBe('hand')
+  })
+})
+
+describe('a take started under a look', () => {
+  it('asks for captions by itself when the look styles them, and keeps asking after a reload', () => {
+    const p = newRecordingProject({ title: '', fps: 60, cursorSkin: 'arrow', style: builtinLook('builtin:studio')!.look })
+    expect(p.captions).toMatchObject({ auto: true, enabled: false, cues: [], style: 'karaoke' })
+    expect(p.output.fps).toBe(60)
+    expect(mergeProject(JSON.parse(JSON.stringify(p))).captions?.auto).toBe(true)
+  })
+
+  it('does not when the look leaves captions plain, or there is no look', () => {
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow' }).captions?.auto).toBeUndefined()
+    const plain = { ...DEFAULT_PROJECT, captions: { ...DEFAULT_PROJECT.captions!, style: undefined } }
+    expect(newRecordingProject({ title: '', fps: 30, cursorSkin: 'arrow', style: lookFromProject(plain) }).captions?.auto).toBeUndefined()
   })
 })

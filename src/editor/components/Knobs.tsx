@@ -24,6 +24,7 @@ import { ImageIcon, Trash, Undo, X } from './icons'
 import { SilencePanel } from './SilencePanel'
 import { CaptionsPanel } from './CaptionsPanel'
 import { LooksPanel } from './LooksPanel'
+import { VoiceoverPanel, type VoiceoverControls } from './Voiceover'
 import { ScenesPanel } from './ScenesPanel'
 import { INSPECTOR_TABS, inspectorTabCss, type InspectorTab } from '../lib/inspector-tabs'
 import { Button, Chip, ColorField, Kbd, NumberField, Row, Section, Segmented, Select, SliderField, Toggle, cx } from './ui'
@@ -47,6 +48,12 @@ export interface KnobsProps {
   children?: ReactNode
   /** Recorded audio, for silence removal. */
   audioUrls?: { mic?: string; system?: string }
+  /** Source seconds of each mouse press, for timing a caption script to the steps. */
+  clickTimes?: number[]
+  /** Recording a voiceover over the take; absent where the editor cannot record. */
+  voiceover?: VoiceoverControls
+  /** Source seconds at which each step of a guided take began. */
+  stepMarks?: number[]
   /** Whether the cleaned-up microphone has been made for this recording. */
   hasCleanMic?: boolean
   /** Make the cleaned-up microphone. */
@@ -289,7 +296,7 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
         {INSPECTOR_TABS.map((tab) => <button key={tab.id} type="button" aria-pressed={panel === tab.id} onClick={() => setPanel(tab.id)}>{tab.label}</button>)}
       </nav>
       <Section title="Looks">
-        <LooksPanel project={project} onProject={onProject} />
+        <LooksPanel project={project} onProject={onProject} hasMic={!!files.mic} />
       </Section>
       <Section title="Editor feel" defaultOpen={false}>
         <Row label="Playful sliders" hint="Elastic drag and spring-back; editor only">
@@ -599,7 +606,8 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
             { value: 'none', label: 'None' },
             { value: 'browser', label: 'Browser' },
             { value: 'macos', label: 'macOS' },
-            { value: 'phone', label: 'Phone' }
+            { value: 'phone', label: 'Phone' },
+            { value: 'laptop', label: 'Laptop' }
           ]}
         />
         {project.mockup.kind !== 'none' && (
@@ -610,21 +618,31 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
                 size="sm"
                 value={project.mockup.theme}
                 onChange={(theme) => set('mockup', { theme })}
-                options={[
-                  { value: 'dark', label: 'Dark' },
-                  { value: 'light', label: 'Light' }
-                ]}
+                options={
+                  project.mockup.kind === 'laptop'
+                    ? [
+                        { value: 'dark', label: 'Space black' },
+                        { value: 'light', label: 'Silver' }
+                      ]
+                    : [
+                        { value: 'dark', label: 'Dark' },
+                        { value: 'light', label: 'Light' }
+                      ]
+                }
               />
             </Row>
-            <Row label="Shell color">
-              <ColorField label="Mockup shell color" value={project.mockup.color} onChange={(color) => set('mockup', { color })} />
-            </Row>
+            {/* The laptop's metal follows its finish above. */}
+            {project.mockup.kind !== 'laptop' && (
+              <Row label="Shell color">
+                <ColorField label="Mockup shell color" value={project.mockup.color} onChange={(color) => set('mockup', { color })} />
+              </Row>
+            )}
             <SliderField label="Corner radius" value={project.mockup.radius} min={0} max={64} step={1} onChange={(radius) => set('mockup', { radius })} format={(v) => `${v} px`} />
             <SliderField
-              label={project.mockup.kind === 'phone' ? 'Bezel' : 'Header'}
+              label={project.mockup.kind === 'phone' || project.mockup.kind === 'laptop' ? 'Bezel' : 'Header'}
               value={project.mockup.headerSize}
-              min={project.mockup.kind === 'phone' ? 0.025 : 0.045}
-              max={project.mockup.kind === 'phone' ? 0.14 : 0.18}
+              min={project.mockup.kind === 'phone' || project.mockup.kind === 'laptop' ? 0.025 : 0.045}
+              max={project.mockup.kind === 'phone' || project.mockup.kind === 'laptop' ? 0.14 : 0.18}
               step={0.005}
               onChange={(headerSize) => set('mockup', { headerSize })}
               format={pct}
@@ -982,8 +1000,17 @@ export const Knobs = memo(function Knobs(props: KnobsProps) {
           folder={files.folder}
           duration={duration}
           sources={[...(props.audioUrls?.mic ? (['mic'] as const) : []), ...(props.audioUrls?.system ? (['system'] as const) : [])]}
+          clicks={props.clickTimes ?? []}
+          stepMarks={props.stepMarks}
         />
       </Section>
+
+      {/* Voiceover ---------------------------------------------------------- */}
+      {props.voiceover && (
+        <Section title="Voiceover" right={project.voiceover?.length ? <Chip tone="ok">{project.voiceover.length}</Chip> : undefined}>
+          <VoiceoverPanel controls={props.voiceover} project={project} onProject={onProject} />
+        </Section>
+      )}
 
       {/* Audio -------------------------------------------------------------- */}
       <Section title="Audio">

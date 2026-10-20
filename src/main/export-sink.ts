@@ -9,6 +9,7 @@ import type { ExportBeginRequest, ExportBeginResponse, ExportEndRequest, ExportE
 import { ffmpegGifArgs } from './gif'
 import { audioMixFilter, hasSpeedChange, spansEnd, speedMixPassOneArgs, speedMixPassTwoArgs } from './audio-filter'
 import { sanitizeBaseName, stemOf, uniqueName } from './naming'
+import { mixVoiceover } from './voiceover'
 
 export interface ExportSinkDeps {
   /** Recordings root; export folders must live under it. */
@@ -35,6 +36,8 @@ interface Job {
   /** File currently being written (the MP4, or the temp MP4 for GIF). */
   writePath: string
   finalPath: string
+  /** The take's folder, where its voiceover files are. */
+  folder: string
 }
 
 let counter = 0
@@ -138,7 +141,7 @@ export function createExportSink(deps: ExportSinkDeps): ExportSink {
         : `${finalPath}.${id}${PART_SUFFIX}`
       await sweepAbandonedParts(exportsDir, existing)
       const fd = fs.openSync(writePath, 'w+')
-      jobs.set(id, { id, kind: request.kind, fd, writePath, finalPath })
+      jobs.set(id, { id, kind: request.kind, fd, writePath, finalPath, folder })
       deps.onProgress?.(id, 0)
       return { exportId: id, path: writePath }
     },
@@ -182,6 +185,14 @@ export function createExportSink(deps: ExportSinkDeps): ExportSink {
             await runFfmpeg(deps.ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-i', job.writePath, '-filter_complex', audioMixFilter(count, request.durationSec), '-map', '0:v:0', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', mixed])
           }
           await fs.promises.rename(mixed, job.writePath)
+        }
+        // The voiceover goes in last, on the output clock, after every speed and pitch step.
+        if (job.kind === 'mp4' && request.voiceover?.length) {
+          await mixVoiceover(deps.ffmpegPath(), job.writePath, job.folder, request.voiceover, {
+            hasAudio: Number.isInteger(count) && count >= 1,
+            durationSec: request.durationSec ?? 0,
+            duck: request.duckUnderVoice !== false
+          })
         }
         if (job.kind === 'gif') {
           await runFfmpeg(deps.ffmpegPath(), ffmpegGifArgs(job.writePath, job.finalPath, request.fps, request.width, request.loop))

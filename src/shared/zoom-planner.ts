@@ -19,6 +19,22 @@ export interface ZoomPlanConfig {
   mergeGapSec: number
   /** Segments shorter than this (seconds) are extended. */
   minSegmentSec: number
+  /**
+   * Only merge neighbouring zooms whose focus points fit in one zoomed view;
+   * the others stay separate and touching, so the camera pans from one click
+   * to the next instead of aiming between them and showing neither. Off keeps
+   * the older plan, whose `auto-<n>` ids a project's removed zooms refer to.
+   */
+  keepApart: boolean
+}
+
+/**
+ * How early a zoom starts, given how long the camera takes to ease in: early
+ * enough to be about 90% of the way in when the click lands, so the click is
+ * seen up close rather than chased. Never less than the default half second.
+ */
+export function leadInFor(easeSec: number): number {
+  return Math.max(DEFAULT_ZOOM_PLAN.leadInSec, (Number.isFinite(easeSec) ? easeSec : 0) * 0.9)
 }
 
 export const DEFAULT_ZOOM_PLAN: ZoomPlanConfig = {
@@ -29,7 +45,8 @@ export const DEFAULT_ZOOM_PLAN: ZoomPlanConfig = {
   clusterGapSec: 2.0,
   clusterDistPx: 320,
   mergeGapSec: 0.8,
-  minSegmentSec: 1.2
+  minSegmentSec: 1.2,
+  keepApart: true
 }
 
 interface Click {
@@ -93,13 +110,33 @@ function spanFromCluster(cluster: Click[], cfg: ZoomPlanConfig, duration: number
   }
 }
 
-/** Merge sorted spans whose gap is smaller than `gapSec`. Focus = weighted centroid. */
-function mergeSpans(spans: Span[], gapSec: number): Span[] {
+/** Share of the zoomed view two focus points may be apart and still share one zoom: each then sits well inside it. */
+export const SHARED_VIEW_FRACTION = 0.6
+
+/**
+ * Merge sorted spans whose gap is smaller than `gapSec`. Focus = weighted
+ * centroid. With `view`, only spans whose foci fit in one zoomed view merge;
+ * the rest are trimmed to touch, so the camera pans across without zooming out.
+ */
+function mergeSpans(spans: Span[], gapSec: number, view?: { width: number; height: number }, minSec = 0): Span[] {
   const sorted = [...spans].sort((a, b) => a.start - b.start)
   const out: Span[] = []
   for (const s of sorted) {
     const cur = out[out.length - 1]
-    if (cur && s.start - cur.end < gapSec) {
+    const near = cur !== undefined && s.start - cur.end < gapSec
+    if (cur && near && view && !(Math.abs(s.x - cur.x) <= view.width * SHARED_VIEW_FRACTION && Math.abs(s.y - cur.y) <= view.height * SHARED_VIEW_FRACTION)) {
+      // Too far apart to share a view: keep both, meeting halfway where they overlap,
+      // unless that leaves either too short to read (rapid clicks all over), which merges as before.
+      const boundary = cur.end > s.start ? Math.max(cur.start, Math.min(s.end, (cur.end + s.start) / 2)) : null
+      const curEnd = boundary ?? cur.end
+      const nextStart = boundary ?? s.start
+      if (curEnd - cur.start >= minSec && s.end - nextStart >= minSec) {
+        cur.end = curEnd
+        out.push({ ...s, start: nextStart })
+        continue
+      }
+    }
+    if (cur && near) {
       const w = cur.weight + s.weight
       cur.x = (cur.x * cur.weight + s.x * s.weight) / w
       cur.y = (cur.y * cur.weight + s.y * s.weight) / w
@@ -181,10 +218,12 @@ export function planAutoZoom(
     }
     spans = spans.filter((s) => s.end > s.start)
   } else {
-    spans = mergeSpans(spans, c.mergeGapSec)
+    // The part of the picture one zoom shows; without a region size every merge is allowed, as before.
+    const view = c.keepApart && regionWidth > 0 && regionHeight > 0 ? { width: regionWidth / Math.max(c.scale, 1), height: regionHeight / Math.max(c.scale, 1) } : undefined
+    spans = mergeSpans(spans, c.mergeGapSec, view, c.minSegmentSec)
     spans = spans.map((s) => extendSpan(s, c.minSegmentSec, duration))
     // Extension can close gaps or create overlaps; merge once more.
-    spans = mergeSpans(spans, c.mergeGapSec)
+    spans = mergeSpans(spans, c.mergeGapSec, view, c.minSegmentSec)
   }
 
   return spans.map((s, i) => ({
@@ -267,7 +306,14 @@ export function resolveZoomSegments(
 
   const removed = new Set(zoom.removedAuto.map(baseSegmentId))
   let auto: ZoomSegment[] = zoom.auto
-    ? planAutoZoom(events, duration, { scale: zoom.scale, motion: zoom.motion ?? 'cinematic' }).filter((s) => !removed.has(s.id))
+    ? // A project that removed automatic zooms keeps the plan its removals were made against.
+      // Such a project also keeps the old half-second lead-in, which its plan was made with.
+      planAutoZoom(events, duration, {
+        scale: zoom.scale,
+        motion: zoom.motion ?? 'cinematic',
+        keepApart: removed.size === 0,
+        ...(removed.size === 0 ? { leadInSec: leadInFor(zoom.easeSec ?? 0.6) } : {})
+      }).filter((s) => !removed.has(s.id))
     : []
 
   let manual: ZoomSegment[] = []
