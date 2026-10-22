@@ -1,7 +1,7 @@
 {
   "name": "polish",
   "productName": "ScreenPolish",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "ScreenPolish: screen recorder with automatic polish (smart zoom, cursor effects, backgrounds, MP4/GIF export).",
   "homepage": "https://github.com/BkashJEE/screenpolish",
   "main": "./out/main/index.js",
