@@ -4,9 +4,11 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 const BYTES_PER_SECOND = 48000 * 2 * 2
 
-export function monitorArgs(sink: string): string[] {
+export function monitorArgs(sink: string, raw = true): string[] {
   if (!sink.trim() || sink.startsWith('-')) throw new Error('No default output device was found')
-  return ['--record', '--raw', '--format', 's16', '--rate', '48000', '--channels', '2',
+  // `--raw` is not available in older pw-cat builds (e.g. PipeWire 1.0.x on Ubuntu 24.04 / Mint 22),
+  // which already write raw PCM to stdout and reject the unknown option.
+  return ['--record', ...(raw ? ['--raw'] : []), '--format', 's16', '--rate', '48000', '--channels', '2',
     '--latency', '20ms', '--target', sink.trim(), '--properties',
     '{ stream.capture.sink = true node.dont-reconnect = true }', '-']
 }
@@ -15,6 +17,16 @@ export function monitorArgs(sink: string): string[] {
 export function leadingSilence(startedAt: number, receivedAt: number, blockBytes: number): number {
   const elapsed = Math.max(0, Math.min(10, (receivedAt - startedAt) / 1000))
   return Math.max(0, Math.round((elapsed * BYTES_PER_SECOND - blockBytes) / 4) * 4)
+}
+
+let rawSupport: Promise<boolean> | null = null
+
+/** True when the installed pw-cat understands `--raw` (checked once via `pw-cat --help`). */
+export function pwCatSupportsRaw(): Promise<boolean> {
+  rawSupport ??= exec('pw-cat', ['--help'], { timeout: 3000 })
+    .then(({ stdout, stderr }) => /--raw\b/.test(stdout + stderr))
+    .catch(() => true)
+  return rawSupport
 }
 
 /** Native PipeWire output monitor. Never opens or falls back to a microphone. */
@@ -30,7 +42,7 @@ export class SystemAudioRecorder {
 
   async start(file: string, ffmpeg: string, startedAt: number, warn: (message: string) => void): Promise<void> {
     const { stdout } = await exec('pactl', ['get-default-sink'], { timeout: 3000 })
-    const capture = spawn('pw-cat', monitorArgs(stdout), { stdio: 'pipe' })
+    const capture = spawn('pw-cat', monitorArgs(stdout, await pwCatSupportsRaw()), { stdio: 'pipe' })
     const encoder = spawn(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 's16le', '-ar', '48000', '-ac', '2',
       '-i', 'pipe:0', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-n', file], { stdio: 'pipe' })
     this.capture = capture
